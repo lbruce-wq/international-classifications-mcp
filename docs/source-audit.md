@@ -17,5 +17,10 @@
 | ICCS 1.0 | UNODC | Official manual | Top-level structure | Detailed definitions remain linked |
 | M49 | UNSD | Official HTML table | Full country/area codes | No national census or administrative codes |
 | SDMX CDCL | SDMX Secretariat | Official registry/downloads | Selected operational codes | Expand via Global Registry adapter |
+| MICS7 modules | UNICEF MICS | Official MICS7 tools page / questionnaire topics | Curated discovery layer, v7.1.9 | Modules are not classifications or answer codes |
+| MICS7 responses | UNICEF MICS | Official MICS7 questionnaires and customisation guidance | Curated question-specific codelists, v7.1 | Namespaced; verify wording, skips and country adaptations before deployment |
+| MICS7 indicators | UNICEF MICS | Official Indicators and Definitions v7.1.9 | Selected high-use concepts and derivation notes | Official specification remains authoritative |
 
-The registry reports incomplete families as `seed` or `reference`. This is a deliberate safety feature, not a hidden gap.
+The registry reports incomplete families as `seed`, `reference`, or `curated`. This is a deliberate safety feature, not a hidden gap.
+
+MICS provenance rule: modules, questionnaire response categories and derived indicators remain different collections. Each carries its MICS round/version; MICS6 and MICS7 content must not be merged without an explicit correspondence review.

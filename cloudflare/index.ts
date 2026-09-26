@@ -6,7 +6,7 @@ interface Env {
 
 export class ClassificationsContainer extends Container<Env> {
   defaultPort = 8000;
-  sleepAfter = "10m";
+  sleepAfter = "1m";
 }
 
 export default {
@@ -15,7 +15,7 @@ export default {
     if (url.pathname === "/" || url.pathname === "/health") {
       return Response.json({
         name: "International Classifications MCP",
-        version: "0.1.0",
+        version: "0.2.0",
         status: "alpha",
         mcp_endpoint: "/mcp",
         deterministic: true,
@@ -23,7 +23,9 @@ export default {
         national_census_geography: "out_of_scope",
       });
     }
-    const id = env.MCP_CONTAINER.idFromName("international-classifications-v3");
+    // Bump the stable instance name when the bundled immutable registry changes,
+    // so an already-running Container cannot continue serving the previous image.
+    const id = env.MCP_CONTAINER.idFromName("international-classifications-v4-mics7");
     return env.MCP_CONTAINER.get(id).fetch(request);
   },
 } satisfies ExportedHandler<Env>;

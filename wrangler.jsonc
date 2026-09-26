@@ -9,11 +9,10 @@
   "containers": [{
     "class_name": "ClassificationsContainer",
     "image": "./Dockerfile",
-    "max_instances": 5,
+    "max_instances": 10,
     "instance_type": "lite"
   }],
   "durable_objects": { "bindings": [{ "name": "MCP_CONTAINER", "class_name": "ClassificationsContainer" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ClassificationsContainer"] }],
   "observability": { "enabled": true }
 }
-

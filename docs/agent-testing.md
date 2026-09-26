@@ -1,5 +1,11 @@
 # Agent acceptance prompts
 
+## MICS7 additions
+
+- "Which MICS7 response categories should I consider for a household drinking-water-source question?" Expected: the MICS7 response collection plus a warning to verify the current questionnaire and collect service-level components.
+- "Find the MICS7 child-functioning response scale." Expected: four functioning-difficulty categories and an explanation that this is not a diagnostic classification.
+- "Search MICS7 indicators for stunting." Expected: the under-five reference population and WHO Child Growth Standards threshold.
+
 1. “Which classification should I use for employee/employer/own-account worker in a labour-force questionnaire?” Expected: ICSE-18, not ISCO or ISIC.
 2. “What questions should I collect to code occupation?” Expected: recommend ISCO-08 and verbatim job title plus tasks; do not return 436 respondent choices.
 3. “Find the ISIC Rev.5 code for growing rice.” Expected: `0112` with UNSD provenance.
@@ -8,4 +14,3 @@
 6. “Export one-digit ISCED levels for XLSForm.” Expected: structured `list_name/name/label` rows.
 7. “Give me district codes for Uganda's 2014 census.” Expected: state that national census geography is out of scope, not fabricate codes.
 8. “Search all classifications for cereals.” Expected: concise ranked results, not the whole registry.
-

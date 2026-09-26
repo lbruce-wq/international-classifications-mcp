@@ -259,6 +259,8 @@ def export_choices(
     warning = (
         "Detailed occupational, industry, disease and crime classifications are normally post-coded rather than shown directly to respondents."
         if classification_id in {"isco08", "isic5", "icd11", "iccs1"}
+        else "MICS response identifiers are question-specific discovery aids. Verify codes, wording, skips and country customisation against the cited MICS7 questionnaire before deployment."
+        if classification_id == "mics7_responses"
         else None
     )
     return ChoiceListResponse(

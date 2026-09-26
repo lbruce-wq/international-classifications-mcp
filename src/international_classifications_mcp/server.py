@@ -50,6 +50,7 @@ mcp = CompatibleFastMCP(
         "Deterministic access to official international statistical classifications. No LLM or paid AI runs inside this server. "
         "Distinguish occupation (ISCO), industry (ISIC), status in employment (ICSE), labour-force status, education level (ISCED), and field of study (ISCED-F). "
         "For questionnaire review, call recommend_classifications with the question, answer options and context; then inspect the selected classification before requesting codes. "
+        "MICS7 content is split into modules, question-specific response codelists and indicator definitions. Never treat a MICS indicator as an answer code, and never mix MICS rounds silently. "
         "Do not dump a full detailed classification into a questionnaire unless explicitly requested. Detailed occupation, industry, disease and crime schemes are normally post-coded. "
         "Mappings may be one-to-many or definition-changing: preserve warnings and citations. National census geography is out of scope."
     ),
@@ -127,7 +128,7 @@ def export_choice_list(
     format: Literal["xlsform", "simple"] = "xlsform",
     limit: int = 1000,
 ) -> ChoiceListResponse:
-    """Return a structured choice list at a selected hierarchy level. Respect the warning when a standard should be post-coded instead."""
+    """Return a structured choice list at a selected hierarchy level. MICS response identifiers are namespaced and require verification against the current questionnaire before implementation."""
     return export_choices(classification_id, level, format, limit)
 
 
