@@ -23,8 +23,7 @@ export default {
         national_census_geography: "out_of_scope",
       });
     }
-    const id = env.MCP_CONTAINER.idFromName("international-classifications-v1");
+    const id = env.MCP_CONTAINER.idFromName("international-classifications-v2");
     return env.MCP_CONTAINER.get(id).fetch(request);
   },
 } satisfies ExportedHandler<Env>;
-

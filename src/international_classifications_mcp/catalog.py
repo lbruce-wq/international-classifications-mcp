@@ -272,6 +272,8 @@ CONCEPT_RULES = {
             "workplace activity",
             "establishment",
             "goods produced",
+            "goods or services",
+            "mainly produce",
             "services provided",
             "business activity",
         ],
@@ -283,6 +285,7 @@ CONCEPT_RULES = {
         "concept": "level of education",
         "positive": [
             "highest education",
+            "highest level of education",
             "education level",
             "grade completed",
             "qualification",

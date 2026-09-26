@@ -60,6 +60,8 @@ def test_questionnaire_recommendation_distinguishes_concepts():
     assert occupation.recommendations[0].classification_id == "isco08"
     industry = recommend("What goods are produced by the establishment where you work?")
     assert industry.recommendations[0].classification_id == "isic5"
+    education = recommend("What is the highest level of education you completed?")
+    assert education.recommendations[0].classification_id == "isced2011"
 
 
 def test_validation_and_hierarchy():
