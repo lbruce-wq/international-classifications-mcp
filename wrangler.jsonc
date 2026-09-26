@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "international-classifications-mcp",
+  "main": "cloudflare/index.ts",
+  "workers_dev": true,
+  "compatibility_date": "2026-09-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "classifications.impactengines.ai", "custom_domain": true }],
+  "containers": [{
+    "class_name": "ClassificationsContainer",
+    "image": "./Dockerfile",
+    "max_instances": 5,
+    "instance_type": "lite"
+  }],
+  "durable_objects": { "bindings": [{ "name": "MCP_CONTAINER", "class_name": "ClassificationsContainer" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ClassificationsContainer"] }],
+  "observability": { "enabled": true }
+}
+

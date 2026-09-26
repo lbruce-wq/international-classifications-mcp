@@ -1,0 +1,59 @@
+# International Classifications MCP
+
+A free, open-source, deterministic MCP server for discovering, explaining, validating and mapping official international statistical classifications.
+
+It is designed for questionnaire development, survey coding, statistical harmonisation and reproducible analysis. No LLM, embedding service or paid AI runs inside the server. The connected AI client interprets the user's task; this service provides versioned official structures, deterministic retrieval and provenance.
+
+## Coverage
+
+The v0.1 registry includes full machine-readable structures for ISIC Rev.5, CPC 3.0, COICOP 2018, HS 2022, SITC Rev.4, BEC Rev.5 and UN M49; a complete ISCO-08 code/title hierarchy; the official ISIC Rev.4 → Rev.5 correspondence; concise operational structures for ICSE-18, ISCED 2011, ISCED-F 2013, ICCS and selected SDMX cross-domain codes; and authoritative catalogue/reference coverage for ICSaW-18, FAO ICC 1.1, ICD-11 and ICF.
+
+National census and administrative geography codes are intentionally out of scope because they change frequently and lack one authoritative global registry.
+
+Coverage is explicit in `list_classifications`: `full`, `seed`, `mapping`, or `reference`. Reference-only families are never presented as complete code lists.
+
+## Tools
+
+- `list_classifications`
+- `get_classification`
+- `recommend_classifications`
+- `search_codes`
+- `get_code_definition`
+- `browse_hierarchy`
+- `validate_codes`
+- `map_codes`
+- `export_choice_list`
+
+## Connect
+
+```bash
+codex mcp add international-classifications --url https://classifications.impactengines.ai/mcp
+```
+
+The root URL provides service status; `/mcp` is the MCP endpoint.
+
+## Local development
+
+```bash
+python -m pip install -e ".[dev]"
+python -m international_classifications_mcp.build_registry
+pytest
+classifications-mcp
+```
+
+For HTTP transport:
+
+```bash
+MCP_TRANSPORT=streamable-http MCP_HOST=0.0.0.0 classifications-mcp
+```
+
+## Build philosophy
+
+- Official custodians remain authoritative.
+- Source files are hashed and registry releases are versioned.
+- Search is programmatic: FTS5, curated concept rules and explicit scoring.
+- Correspondences preserve one-to-many and changed-definition warnings.
+- Detailed occupations, industries, diseases and crimes are normally post-coded, not dumped into respondent-facing questionnaires.
+- Source content remains subject to its custodian's terms; the MIT licence covers this software, not third-party classification content.
+
+See [source audit](docs/source-audit.md) and [agent test prompts](docs/agent-testing.md).
