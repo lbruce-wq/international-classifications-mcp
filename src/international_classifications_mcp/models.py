@@ -75,6 +75,7 @@ class ClassificationRecommendation(BaseModel):
     source_title: str
     source_url: str
     codelist_id: str | None = None
+    codelist_title: str | None = None
 
 
 class RecommendationResponse(BaseModel):

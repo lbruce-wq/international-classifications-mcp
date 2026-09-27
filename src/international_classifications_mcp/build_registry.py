@@ -394,7 +394,7 @@ def build(output: Path = OUTPUT) -> Path:
     _ingest_iccs(conn)
     _ingest_icc(conn)
     _ingest_curated_codelists(conn)
-    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.5.0')")
+    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.5.1')")
     conn.execute("INSERT INTO build_metadata VALUES('built_at',?)", (now,))
     conn.execute("INSERT INTO build_metadata VALUES('national_census_geography','out_of_scope')")
     conn.commit()

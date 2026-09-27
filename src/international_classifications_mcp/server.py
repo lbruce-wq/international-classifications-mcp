@@ -52,7 +52,7 @@ mcp = CompatibleFastMCP(
     instructions=(
         "Deterministic access to official international statistical classifications. No LLM or paid AI runs inside this server. "
         "Distinguish occupation (ISCO), industry (ISIC), status in employment (ICSE), labour-force status, education level (ISCED), and field of study (ISCED-F). "
-        "For questionnaire review, call recommend_classifications with the question, answer options and context; then inspect the selected classification before requesting codes. "
+        "For questionnaire review, call recommend_classifications with the question, answer options and context. Present every returned relevant alternative and its role; ranking is not an automatic selection. "
         "MICS7 content is limited to question-specific response codelists. MICS indicator definitions belong in a development-indicators service, not this classification registry. Never route an indicator, proportion, prevalence or rate request to an answer codelist. "
         "Before exporting MICS responses, call list_codelists and select exactly one codelist_id; never merge independent MICS answer lists. "
         "Do not dump a full detailed classification into a questionnaire unless explicitly requested. Detailed occupation, industry, disease and crime schemes are normally post-coded. "
@@ -62,7 +62,9 @@ mcp = CompatibleFastMCP(
     port=int(os.getenv("MCP_PORT", "8000")),
 )
 mcp._mcp_server.version = __version__
-READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+READ_ONLY = ToolAnnotations(
+    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False
+)
 
 
 @mcp.tool(title="List classifications", annotations=READ_ONLY)
@@ -92,7 +94,7 @@ def recommend_classifications(
     survey_context: str | None = None,
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
 ) -> RecommendationResponse:
-    """Deterministically rank applicable classification concepts for a questionnaire item. Include answer options and module context. This uses curated rules, not an LLM."""
+    """Return a deterministic ranked shortlist of all relevant classification concepts and codelists. Ranking supports user choice; it is not an automatic selection. Include answer options and context."""
     return recommend(question_text, answer_options, survey_context, limit)
 
 
@@ -103,7 +105,7 @@ def search_codes(
     codelist_id: str | None = None,
     limit: Annotated[int, Field(ge=1, le=100)] = 20,
 ) -> SearchResponse:
-    """Full-text search code labels, definitions, inclusions and exclusions. Use codelist_id to restrict a MICS response-list search."""
+    """Full-text search labels and notes. Results restrict to one option list only when codelist_id is explicitly supplied."""
     return registry_search_codes(query, classification_ids, limit, codelist_id)
 
 
@@ -115,14 +117,18 @@ def get_code_definition(classification_id: str, code: str) -> CodeItem:
 
 @mcp.tool(title="Browse classification hierarchy", annotations=READ_ONLY)
 def browse_hierarchy(
-    classification_id: str, parent_code: str | None = None, limit: Annotated[int, Field(ge=1, le=500)] = 200
+    classification_id: str,
+    parent_code: str | None = None,
+    limit: Annotated[int, Field(ge=1, le=500)] = 200,
 ) -> list[CodeItem]:
     """Browse top-level items or immediate children under parent_code without returning the whole classification."""
     return registry_browse_hierarchy(classification_id, parent_code, limit)
 
 
 @mcp.tool(title="Validate classification codes", annotations=READ_ONLY)
-def validate_codes(classification_id: str, codes: Annotated[list[str], Field(min_length=1)]) -> ValidationResponse:
+def validate_codes(
+    classification_id: str, codes: Annotated[list[str], Field(min_length=1)]
+) -> ValidationResponse:
     """Validate exact codes against one named classification version."""
     return registry_validate_codes(classification_id, codes)
 

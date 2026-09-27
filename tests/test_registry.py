@@ -117,7 +117,9 @@ def test_mics_codelists_are_independent_and_exportable():
     lists = {item.codelist_id: item for item in list_codelists("mics7_responses")}
     assert lists["BR.STATUS"].option_count == 4
     assert lists["CF.DIFFICULTY"].option_count == 4
-    result = search_codes("vaccination source", ["mics7_responses"], 20)
+    result = search_codes(
+        "vaccination source", ["mics7_responses"], 20, codelist_id="IM.SOURCE"
+    )
     assert {item.codelist_id for item in result.results} == {"IM.SOURCE"}
     export = export_choices("mics7_responses", format="xlsform", codelist_id="BR.STATUS")
     assert export.option_count == 4
@@ -149,6 +151,31 @@ def test_priority_three_questionnaire_ecosystems_are_separate_codelists():
         assert codelist_id in ids
         exported = export_choices(classification_id, codelist_id=codelist_id)
         assert exported.option_count > 1
+
+
+def test_recommendations_return_all_relevant_lists_without_auto_selecting():
+    vaccination = recommend(
+        "What is the vaccination evidence source?", survey_context="MICS child health"
+    )
+    vaccination_lists = {
+        item.codelist_id for item in vaccination.recommendations if item.codelist_id
+    }
+    assert {
+        "IM.SOURCE",
+        "DHS8.VAX_EVIDENCE",
+        "WHO.VAX.EVIDENCE",
+    } <= vaccination_lists
+    assert "ranking is not an automatic selection" in vaccination.warnings[0]
+    assert "explicitly select" in vaccination.next_action
+
+    functioning = recommend("Child functioning difficulty scale", limit=20)
+    functioning_lists = {
+        item.codelist_id for item in functioning.recommendations if item.codelist_id
+    }
+    assert {"CF.DIFFICULTY", "WG.DIFFICULTY"} <= functioning_lists
+
+    unrelated = {item.codelist_id for item in functioning.recommendations}
+    assert "JMP.WATER.LADDER" not in unrelated
 
 
 def test_regression_search_routing_and_validation():
