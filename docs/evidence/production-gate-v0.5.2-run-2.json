@@ -1,0 +1,15 @@
+{
+  "server_version": "0.5.2",
+  "calls": 345,
+  "successful_schema_validated": 339,
+  "expected_errors": 6,
+  "unexpected_errors": 0,
+  "families": 31,
+  "tools": 10,
+  "latency_ms": {
+    "median": 256.9,
+    "p95": 412.5,
+    "p99": 797.9,
+    "maximum": 1148.7
+  }
+}
