@@ -202,9 +202,10 @@ def recommend(
     candidates.sort(key=lambda x: (-x.score, x.classification_id))
     warnings = []
     if not candidates:
-        warnings.append(
-            "No deterministic concept rule matched. Provide answer options and module context, or search classifications by domain."
-        )
+        if "mics" in haystack and any(term in haystack for term in ("indicator", "proportion", "percentage", "prevalence", "rate", "numerator", "denominator")):
+            warnings.append("This is a MICS analytical-indicator request. Use the Development Indicators MCP; this registry intentionally exposes only MICS questionnaire response codelists.")
+        else:
+            warnings.append("No deterministic concept rule matched. Provide answer options and module context, or search classifications by domain.")
     elif len(candidates) > 1 and candidates[0].score - candidates[1].score < 15:
         warnings.append(
             "The leading concepts are close. Inspect both and use surrounding questionnaire context before deciding."

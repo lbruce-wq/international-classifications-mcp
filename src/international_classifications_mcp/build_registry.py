@@ -282,7 +282,7 @@ def build(output: Path = OUTPUT) -> Path:
     _ingest_isco(conn)
     _ingest_m49(conn)
     _ingest_mics7(conn)
-    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.3.0')")
+    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.3.1')")
     conn.execute("INSERT INTO build_metadata VALUES('built_at',?)", (now,))
     conn.execute("INSERT INTO build_metadata VALUES('national_census_geography','out_of_scope')")
     conn.commit()

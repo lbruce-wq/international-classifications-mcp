@@ -15,7 +15,7 @@ export default {
     if (url.pathname === "/" || url.pathname === "/health") {
       return Response.json({
         name: "International Classifications MCP",
-        version: "0.3.0",
+        version: "0.3.1",
         status: "alpha",
         mcp_endpoint: "/mcp",
         deterministic: true,
@@ -25,7 +25,7 @@ export default {
     }
     // Bump the stable instance name when the bundled immutable registry changes,
     // so an already-running Container cannot continue serving the previous image.
-    const id = env.MCP_CONTAINER.idFromName("international-classifications-v5-hardening");
+    const id = env.MCP_CONTAINER.idFromName("international-classifications-v6-hardening");
     return env.MCP_CONTAINER.get(id).fetch(request);
   },
 } satisfies ExportedHandler<Env>;

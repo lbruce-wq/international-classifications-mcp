@@ -287,6 +287,7 @@ CONCEPT_RULES = {
     "icls_lfs19": {
         "concept": "labour force status",
         "positive": ["labour force status", "employed unemployed", "outside the labour force", "not in the labour force", "worked last week", "sought work", "looking for work", "available for work"],
+        "priority": ["labour force status", "outside the labour force", "not in the labour force"],
         "negative": ["employee", "employer", "own-account", "job title"],
         "reason": "The wording concerns whether a person is employed, unemployed or outside the labour force.",
         "usage_mode": "derive using the ILO activity, job-search and availability framework",
