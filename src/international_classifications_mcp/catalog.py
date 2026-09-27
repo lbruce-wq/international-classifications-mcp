@@ -37,7 +37,7 @@ CLASSIFICATIONS = [
         "status": "current",
         "coverage": "core",
         "description": "Core labour-force-status categories: employed, unemployed and outside the labour force.",
-        "source_url": "https://www.ilo.org/resource/19th-international-conference-labour-statisticians-resolution-concerning",
+        "source_url": "https://www.ilo.org/resource/overview-19th-icls-resolution-concerning-statistics-work-employment-and",
         "licence_note": "Core categories from the 19th ICLS resolution; national operational questions require the full ILO measurement framework.",
     },
     {
@@ -401,7 +401,7 @@ CLASSIFICATIONS = [
         "status": "current",
         "coverage": "curated",
         "description": "Selected land-use, livestock, holding and machinery categories used in agricultural censuses.",
-        "source_url": "https://www.fao.org/world-census-agriculture/wcarounds/wca2020/en/",
+        "source_url": "https://www.fao.org/world-census-agriculture/wca-round/wca-round-2020/en",
         "licence_note": "Curated discovery layer from WCA 2020 guidance; not a substitute for national adaptations or the full programme.",
     },
 ]

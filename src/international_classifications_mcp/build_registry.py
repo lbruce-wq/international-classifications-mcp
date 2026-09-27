@@ -168,24 +168,53 @@ def _ingest_iscedf(conn: sqlite3.Connection) -> None:
         code = max(codes, key=len)
         parent = code[:-1] if len(code) in {3, 4} else None
         notes = re.findall(r'skos:scopeNote "([^"]+)"@en', block)
-        _insert_code(conn, "iscedf2013", code, labels[0], level=len(code), parent_code=parent, definition=notes[0] if notes else None)
+        _insert_code(
+            conn,
+            "iscedf2013",
+            code,
+            labels[0],
+            level=len(code),
+            parent_code=parent,
+            definition=notes[0] if notes else None,
+        )
 
 
 def _ingest_iccs(conn: sqlite3.Connection) -> None:
     text = (RAW / "iccs1.pdf.txt").read_text(encoding="utf-8")[81053:260000]
     for code, label in re.findall(r"(?m)^\s*(\d{4,6})\s+(.\S.*)$", text):
         parent = code[:-1] if len(code) in {5, 6} else code[:2]
-        _insert_code(conn, "iccs1", code, label.strip(), level={4: 2, 5: 3, 6: 4}[len(code)], parent_code=parent)
+        _insert_code(
+            conn,
+            "iccs1",
+            code,
+            label.strip(),
+            level={4: 2, 5: 3, 6: 4}[len(code)],
+            parent_code=parent,
+        )
 
 
 def _ingest_icc(conn: sqlite3.Connection) -> None:
-    lines = [line.strip() for line in (RAW / "icc11.txt").read_text(encoding="utf-8-sig", errors="replace").splitlines()]
+    lines = [
+        line.strip()
+        for line in (RAW / "icc11.txt")
+        .read_text(encoding="utf-8-sig", errors="replace")
+        .splitlines()
+    ]
     start = lines.index("Indicative Crop Classification Version 1.1 (ICC)")
     ignored = {"T", "P", "T/P", "Group", "Class", "Sub-", "class", "Order", "Title", "Crop type*"}
     for index, code in enumerate(lines[start + 1 :], start + 1):
         if not re.fullmatch(r"\d+(?:\.\d+){0,3}", code):
             continue
-        label = next((candidate for candidate in lines[index + 1 : index + 10] if candidate and candidate not in ignored and not re.fullmatch(r"\d+(?:\.\d+){0,3}", candidate)), None)
+        label = next(
+            (
+                candidate
+                for candidate in lines[index + 1 : index + 10]
+                if candidate
+                and candidate not in ignored
+                and not re.fullmatch(r"\d+(?:\.\d+){0,3}", candidate)
+            ),
+            None,
+        )
         if not label:
             continue
         parent = code.rsplit(".", 1)[0] if "." in code else None
@@ -197,10 +226,22 @@ def _ingest_curated_codelists(conn: sqlite3.Connection) -> None:
     warning = "Use only within the named source/version and verify exact wording, skips and country adaptation against the official instrument."
     for cid, family in payload.items():
         for codelist_id, (title, options) in family["lists"].items():
-            conn.execute("INSERT INTO codelists VALUES(?,?,?,?,?,?,?)", (cid, codelist_id, title, title, family["version"], warning, family["source_url"]))
+            conn.execute(
+                "INSERT INTO codelists VALUES(?,?,?,?,?,?,?)",
+                (cid, codelist_id, title, title, family["version"], warning, family["source_url"]),
+            )
             for code, label in options:
                 full_code = f"{codelist_id}.{code}"
-                _insert_code(conn, cid, full_code, label, level=2, parent_code=codelist_id, codelist_id=codelist_id, includes=f"Codelist: {title}")
+                _insert_code(
+                    conn,
+                    cid,
+                    full_code,
+                    label,
+                    level=2,
+                    parent_code=codelist_id,
+                    codelist_id=codelist_id,
+                    includes=f"Codelist: {title}",
+                )
 
 
 def _ingest_comtrade(conn: sqlite3.Connection, cid: str, filename: str) -> None:
@@ -305,21 +346,42 @@ def _ingest_mics7(conn: sqlite3.Connection) -> None:
     """Load only round-specific MICS questionnaire response codelists."""
     payload = json.loads((RAW / "mics7_curated.json").read_text(encoding="utf-8"))
     list_titles = {
-        "SEX": "Sex", "YN": "Yes, no and permitted non-response", "WS_SOURCE": "Main drinking-water source",
-        "WS_SAN": "Sanitation facility type", "BR.STATUS": "Birth-registration status",
-        "IM.SOURCE": "Vaccination evidence/source", "CF.DIFFICULTY": "Child-functioning difficulty scale",
-        "CD.METHOD_GROUP": "Child-discipline method group", "ED.ATTEND": "School-attendance status",
+        "SEX": "Sex",
+        "YN": "Yes, no and permitted non-response",
+        "WS_SOURCE": "Main drinking-water source",
+        "WS_SAN": "Sanitation facility type",
+        "BR.STATUS": "Birth-registration status",
+        "IM.SOURCE": "Vaccination evidence/source",
+        "CF.DIFFICULTY": "Child-functioning difficulty scale",
+        "CD.METHOD_GROUP": "Child-discipline method group",
+        "ED.ATTEND": "School-attendance status",
     }
     list_aliases = {
-        "Sex": "SEX", "Yes/no": "YN", "Main drinking-water source": "WS_SOURCE",
-        "Sanitation facility": "WS_SAN", "Birth registration": "BR.STATUS",
-        "Vaccination evidence": "IM.SOURCE", "Child functioning response scale": "CF.DIFFICULTY",
-        "Child discipline method group": "CD.METHOD_GROUP", "School attendance status": "ED.ATTEND",
+        "Sex": "SEX",
+        "Yes/no": "YN",
+        "Main drinking-water source": "WS_SOURCE",
+        "Sanitation facility": "WS_SAN",
+        "Birth registration": "BR.STATUS",
+        "Vaccination evidence": "IM.SOURCE",
+        "Child functioning response scale": "CF.DIFFICULTY",
+        "Child discipline method group": "CD.METHOD_GROUP",
+        "School attendance status": "ED.ATTEND",
     }
     provenance_url = "https://classifications.impactengines.ai/provenance/mics7"
     warning = "Verify wording, codes, skips and country customisation against the cited MICS7 questionnaire before deployment."
     for codelist_id, title in list_titles.items():
-        conn.execute("INSERT INTO codelists VALUES(?,?,?,?,?,?,?)", ("mics7_responses", codelist_id, title, title, payload["versions"]["responses"], warning, provenance_url))
+        conn.execute(
+            "INSERT INTO codelists VALUES(?,?,?,?,?,?,?)",
+            (
+                "mics7_responses",
+                codelist_id,
+                title,
+                title,
+                payload["versions"]["responses"],
+                warning,
+                provenance_url,
+            ),
+        )
     for code, label, codelist, definition in payload["responses"]:
         codelist_id = list_aliases[codelist]
         _insert_code(
@@ -347,9 +409,20 @@ def _source_hash(cid: str) -> str | None:
         "isco08": "isco08.txt",
         "m49": "m49.csv",
         "mics7_responses": "mics7_curated.json",
-        "icatus2016": "icatus2016.txt", "cofog1999": "cofog1999.txt", "copni1999": "copni1999.txt", "copp1999": "copp1999.txt",
-        "unece_rec20": "unece_rec20.csv", "unece_rec21": "unece_rec21.csv", "iscedf2013": "iscedf2013.ttl", "iccs1": "iccs1.pdf",
-        "dhs8_responses": "survey_codelists_curated.json", "wg_responses": "survey_codelists_curated.json", "jmp2018_responses": "survey_codelists_curated.json", "who_vax_responses": "survey_codelists_curated.json", "fao_wca2020_responses": "survey_codelists_curated.json", "icc11": "icc11.doc",
+        "icatus2016": "icatus2016.txt",
+        "cofog1999": "cofog1999.txt",
+        "copni1999": "copni1999.txt",
+        "copp1999": "copp1999.txt",
+        "unece_rec20": "unece_rec20.csv",
+        "unece_rec21": "unece_rec21.csv",
+        "iscedf2013": "iscedf2013.ttl",
+        "iccs1": "iccs1.pdf",
+        "dhs8_responses": "survey_codelists_curated.json",
+        "wg_responses": "survey_codelists_curated.json",
+        "jmp2018_responses": "survey_codelists_curated.json",
+        "who_vax_responses": "survey_codelists_curated.json",
+        "fao_wca2020_responses": "survey_codelists_curated.json",
+        "icc11": "icc11.doc",
     }
     filename = files.get(cid)
     if not filename or not (RAW / filename).exists():
@@ -394,7 +467,7 @@ def build(output: Path = OUTPUT) -> Path:
     _ingest_iccs(conn)
     _ingest_icc(conn)
     _ingest_curated_codelists(conn)
-    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.5.1')")
+    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.5.2')")
     conn.execute("INSERT INTO build_metadata VALUES('built_at',?)", (now,))
     conn.execute("INSERT INTO build_metadata VALUES('national_census_geography','out_of_scope')")
     conn.commit()

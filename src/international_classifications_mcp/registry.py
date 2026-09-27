@@ -149,7 +149,12 @@ CODELIST_TERMS = {
     "fao_wca2020_responses": {
         "WCA.LAND_USE": ("land use class", "agricultural land use"),
         "WCA.LIVESTOCK": ("livestock group", "type of livestock"),
-        "WCA.HOLDING_SECTOR": ("holding sector", "household sector"),
+        "WCA.HOLDING_SECTOR": (
+            "holding sector",
+            "household sector",
+            "institutional sector of the agricultural holding",
+            "institutional sector",
+        ),
         "WCA.MACHINERY_SOURCE": ("machinery source", "source of agricultural machinery"),
     },
 }
@@ -248,6 +253,24 @@ def get_code(classification_id: str, code: str) -> CodeItem:
             (classification_id, code),
         ).fetchone()
     if not row:
+        codelist = next(
+            (item for item in list_codelists(classification_id) if item.codelist_id == code),
+            None,
+        )
+        if codelist:
+            meta = get_classification(classification_id)
+            return CodeItem(
+                classification_id=classification_id,
+                code=codelist.codelist_id,
+                label=codelist.title,
+                level=1,
+                definition=codelist.concept,
+                classification_version=meta.version,
+                source_title=meta.name,
+                source_url=codelist.source_url,
+                codelist_id=codelist.codelist_id,
+                node_kind="codelist",
+            )
         raise ValueError(f"Code '{code}' not found in {classification_id}.")
     return CodeItem(**dict(row))
 
@@ -272,6 +295,7 @@ def browse_hierarchy(
                     source_title=meta.name,
                     source_url=item.source_url,
                     codelist_id=item.codelist_id,
+                    node_kind="codelist",
                 )
                 for item in codelists[:limit]
             ]
@@ -335,13 +359,15 @@ def recommend(
             + option_matches * 15
             - len(conflicts) * 12
         )
-        if score <= 0:
+        codelist_matches = _matching_codelists(cid, haystack)
+        if score <= 0 and not codelist_matches:
             continue
         meta = get_classification(cid)
-        codelist_matches = _matching_codelists(cid, haystack)
         alternatives = codelist_matches or [(None, [])]
         for codelist, codelist_evidence in alternatives:
-            candidate_score = score + (30 if codelist else 0) + min(len(codelist_evidence), 2) * 10
+            candidate_score = (
+                max(score, 0) + (30 if codelist else 0) + min(len(codelist_evidence), 2) * 10
+            )
             confidence = (
                 "high" if candidate_score >= 55 else "medium" if candidate_score >= 25 else "low"
             )

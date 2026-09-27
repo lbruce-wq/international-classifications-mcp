@@ -10,6 +10,39 @@ from international_classifications_mcp.registry import (
     validate_codes,
 )
 
+CURATED_ROUTE_FIXTURES = {
+    "BR.STATUS": "birth registration status",
+    "CD.METHOD_GROUP": "child discipline method",
+    "CF.DIFFICULTY": "child functioning difficulty scale",
+    "ED.ATTEND": "school attendance status",
+    "IM.SOURCE": "vaccination evidence source",
+    "SEX": "MICS sex",
+    "WS_SAN": "sanitation facility type",
+    "WS_SOURCE": "main drinking water source",
+    "YN": "yes/no response",
+    "DHS8.SEX": "DHS sex",
+    "DHS8.RESIDENCE": "urban rural place of residence",
+    "DHS8.MARITAL": "current marital status",
+    "DHS8.VAX_EVIDENCE": "DHS vaccination evidence",
+    "DHS8.DELIVERY_PLACE": "place of delivery",
+    "DHS8.CONTRACEPTION": "current contraceptive method",
+    "WG.DIFFICULTY": "Washington Group difficulty scale",
+    "WG.FREQUENCY": "affect frequency",
+    "WG.AFFECT_LEVEL": "affect severity",
+    "JMP.WATER.SOURCE_CLASS": "JMP drinking water source class",
+    "JMP.SAN.FACILITY_CLASS": "JMP sanitation facility class",
+    "JMP.WATER.LADDER": "drinking water service ladder",
+    "JMP.SAN.LADDER": "sanitation service ladder",
+    "JMP.HYGIENE.LADDER": "hygiene service ladder",
+    "WHO.VAX.RECORD": "WHO vaccination record availability",
+    "WHO.VAX.EVIDENCE": "WHO vaccination evidence source",
+    "WHO.VAX.DOSE_STATUS": "WHO antigen dose status",
+    "WCA.LAND_USE": "WCA agricultural land use class",
+    "WCA.LIVESTOCK": "WCA livestock group",
+    "WCA.HOLDING_SECTOR": "institutional sector of the agricultural holding",
+    "WCA.MACHINERY_SOURCE": "source of agricultural machinery",
+}
+
 
 def test_catalog_has_tier_one_families():
     items = list_classifications()
@@ -33,8 +66,17 @@ def test_catalog_has_tier_one_families():
         "sdmx",
         "mics7_responses",
         "icls_lfs19",
-        "icatus2016", "cofog1999", "copni1999", "copp1999", "unece_rec20", "unece_rec21",
-        "dhs8_responses", "wg_responses", "jmp2018_responses", "who_vax_responses", "fao_wca2020_responses",
+        "icatus2016",
+        "cofog1999",
+        "copni1999",
+        "copp1999",
+        "unece_rec20",
+        "unece_rec21",
+        "dhs8_responses",
+        "wg_responses",
+        "jmp2018_responses",
+        "who_vax_responses",
+        "fao_wca2020_responses",
     } <= ids
 
 
@@ -117,9 +159,7 @@ def test_mics_codelists_are_independent_and_exportable():
     lists = {item.codelist_id: item for item in list_codelists("mics7_responses")}
     assert lists["BR.STATUS"].option_count == 4
     assert lists["CF.DIFFICULTY"].option_count == 4
-    result = search_codes(
-        "vaccination source", ["mics7_responses"], 20, codelist_id="IM.SOURCE"
-    )
+    result = search_codes("vaccination source", ["mics7_responses"], 20, codelist_id="IM.SOURCE")
     assert {item.codelist_id for item in result.results} == {"IM.SOURCE"}
     export = export_choices("mics7_responses", format="xlsform", codelist_id="BR.STATUS")
     assert export.option_count == 4
@@ -132,7 +172,14 @@ def test_mics_codelists_are_independent_and_exportable():
 
 
 def test_search_safely_handles_fts_punctuation():
-    for query in ["zzzzzz-no-such-code", "x:y", '(quoted)', '"operator"', "teacher's", "water—source"]:
+    for query in [
+        "zzzzzz-no-such-code",
+        "x:y",
+        "(quoted)",
+        '"operator"',
+        "teacher's",
+        "water—source",
+    ]:
         result = search_codes(query, None, 5)
         assert result.total >= 0
     assert search_codes("zzzzzz-no-such-code", None, 5).total == 0
@@ -151,6 +198,47 @@ def test_priority_three_questionnaire_ecosystems_are_separate_codelists():
         assert codelist_id in ids
         exported = export_choices(classification_id, codelist_id=codelist_id)
         assert exported.option_count > 1
+
+
+def test_all_curated_codelist_containers_are_retrievable_and_valid():
+    families = [
+        "mics7_responses",
+        "dhs8_responses",
+        "wg_responses",
+        "jmp2018_responses",
+        "who_vax_responses",
+        "fao_wca2020_responses",
+    ]
+    for classification_id in families:
+        roots = browse_hierarchy(classification_id)
+        assert roots
+        for node in roots:
+            assert node.node_kind == "codelist"
+            assert get_code(classification_id, node.code).node_kind == "codelist"
+            assert validate_codes(classification_id, [node.code]).valid_count == 1
+            children = browse_hierarchy(classification_id, node.code)
+            assert children
+            assert all(child.node_kind == "code" for child in children)
+
+
+def test_every_curated_codelist_has_a_positive_routing_fixture():
+    actual = {
+        item.codelist_id
+        for family in (
+            "mics7_responses",
+            "dhs8_responses",
+            "wg_responses",
+            "jmp2018_responses",
+            "who_vax_responses",
+            "fao_wca2020_responses",
+        )
+        for item in list_codelists(family)
+    }
+    assert set(CURATED_ROUTE_FIXTURES) == actual
+    for expected, prompt in CURATED_ROUTE_FIXTURES.items():
+        result = recommend(prompt, limit=20)
+        returned = {item.codelist_id for item in result.recommendations}
+        assert expected in returned, (expected, prompt, returned)
 
 
 def test_recommendations_return_all_relevant_lists_without_auto_selecting():
@@ -180,7 +268,9 @@ def test_recommendations_return_all_relevant_lists_without_auto_selecting():
 
 def test_regression_search_routing_and_validation():
     assert search_codes("nurse", ["isco08"], 10).total > 0
-    labour = recommend("Was the respondent employed, unemployed, or outside the labour force last week?")
+    labour = recommend(
+        "Was the respondent employed, unemployed, or outside the labour force last week?"
+    )
     assert labour.recommendations[0].classification_id == "icls_lfs19"
     field = recommend("What was the field of your degree or qualification?")
     assert field.recommendations[0].classification_id == "iscedf2013"

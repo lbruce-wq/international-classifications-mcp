@@ -4,7 +4,9 @@ A free, open-source, deterministic MCP server for discovering, explaining, valid
 
 It is designed for questionnaire development, survey coding, statistical harmonisation and reproducible analysis. No LLM, embedding service or paid AI runs inside the server. The connected AI client interprets the user's task; this service provides versioned official structures, deterministic retrieval and provenance.
 
-## Coverage (v0.5.1)
+## Coverage (v0.5.2)
+
+Production safeguards include first-class typed codelist hierarchy nodes, deterministic routing fixtures for every curated codelist, weekly authoritative-link checks, per-tool request IDs and latency logging, and documented OpenAI directory annotation justifications.
 
 The v0.1 registry includes full machine-readable structures for ISIC Rev.5, CPC 3.0, COICOP 2018, HS 2022, SITC Rev.4, BEC Rev.5 and UN M49; a complete ISCO-08 code/title hierarchy; the official ISIC Rev.4 → Rev.5 correspondence; concise operational structures for ICSE-18, ISCED 2011, ISCED-F 2013, ICCS and selected SDMX cross-domain codes; and authoritative catalogue/reference coverage for ICSaW-18, FAO ICC 1.1, ICD-11 and ICF.
 

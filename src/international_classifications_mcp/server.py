@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
+import uuid
 from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -29,10 +32,29 @@ from .registry import map_codes as registry_map_codes
 from .registry import search_codes as registry_search_codes
 from .registry import validate_codes as registry_validate_codes
 
+logger = logging.getLogger(__name__)
+
 
 class CompatibleFastMCP(FastMCP):
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
-        result = await super().call_tool(name, arguments)
+        request_id = str(uuid.uuid4())
+        started = time.perf_counter()
+        try:
+            result = await super().call_tool(name, arguments)
+        except Exception:
+            logger.exception(
+                "tool_call_failed tool=%s request_id=%s duration_ms=%.1f",
+                name,
+                request_id,
+                (time.perf_counter() - started) * 1000,
+            )
+            raise
+        logger.info(
+            "tool_call_completed tool=%s request_id=%s duration_ms=%.1f",
+            name,
+            request_id,
+            (time.perf_counter() - started) * 1000,
+        )
         if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], dict):
             structured = result[1]
             return CallToolResult(
@@ -60,6 +82,10 @@ mcp = CompatibleFastMCP(
     ),
     host=os.getenv("MCP_HOST", "127.0.0.1"),
     port=int(os.getenv("MCP_PORT", "8000")),
+)
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(message)s",
 )
 mcp._mcp_server.version = __version__
 READ_ONLY = ToolAnnotations(
@@ -111,7 +137,7 @@ def search_codes(
 
 @mcp.tool(title="Get code definition", annotations=READ_ONLY)
 def get_code_definition(classification_id: str, code: str) -> CodeItem:
-    """Retrieve one exact code, label, hierarchy position and available explanatory notes."""
+    """Retrieve one exact code or codelist container, including its node_kind, hierarchy position and explanatory notes."""
     return registry_get_code(classification_id, code)
 
 
@@ -121,7 +147,7 @@ def browse_hierarchy(
     parent_code: str | None = None,
     limit: Annotated[int, Field(ge=1, le=500)] = 200,
 ) -> list[CodeItem]:
-    """Browse top-level items or immediate children under parent_code without returning the whole classification."""
+    """Browse top-level nodes or immediate children. Curated families return node_kind=codelist containers at root; pass that code as parent_code to browse its options."""
     return registry_browse_hierarchy(classification_id, parent_code, limit)
 
 

@@ -42,6 +42,7 @@ class CodeItem(BaseModel):
     source_title: str | None = None
     source_url: str | None = None
     codelist_id: str | None = None
+    node_kind: Literal["code", "codelist"] = "code"
 
 
 class CodelistSummary(BaseModel):
