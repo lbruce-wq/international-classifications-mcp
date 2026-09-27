@@ -1,7 +1,9 @@
 from international_classifications_mcp.registry import (
     browse_hierarchy,
+    export_choices,
     get_code,
     list_classifications,
+    list_codelists,
     map_codes,
     recommend,
     search_codes,
@@ -95,6 +97,32 @@ def test_mics7_questionnaire_discovery():
     assert result.recommendations[0].classification_id == "mics7_responses"
     search = search_codes("birth registration", ["mics7_responses"], 10)
     assert search.total >= 1
+    indicator = recommend("What proportion of under-five children are stunted in MICS?")
+    assert not indicator.recommendations
+    assert "Development Indicators MCP" in indicator.next_action
+
+
+def test_mics_codelists_are_independent_and_exportable():
+    lists = {item.codelist_id: item for item in list_codelists("mics7_responses")}
+    assert lists["BR.STATUS"].option_count == 4
+    assert lists["CF.DIFFICULTY"].option_count == 4
+    result = search_codes("vaccination source", ["mics7_responses"], 20)
+    assert {item.codelist_id for item in result.results} == {"IM.SOURCE"}
+    export = export_choices("mics7_responses", format="xlsform", codelist_id="BR.STATUS")
+    assert export.option_count == 4
+    assert {row["list_name"] for row in export.rows} == {"BR.STATUS"}
+    try:
+        export_choices("mics7_responses")
+        assert False, "MICS export should require a codelist"
+    except ValueError as error:
+        assert "codelist_id is required" in str(error)
+
+
+def test_search_safely_handles_fts_punctuation():
+    for query in ["zzzzzz-no-such-code", "x:y", '(quoted)', '"operator"', "teacher's", "water—source"]:
+        result = search_codes(query, None, 5)
+        assert result.total >= 0
+    assert search_codes("zzzzzz-no-such-code", None, 5).total == 0
 
 
 def test_regression_search_routing_and_validation():

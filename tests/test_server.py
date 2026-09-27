@@ -6,6 +6,7 @@ def test_server_identity_and_tools():
     names = {tool.name for tool in mcp._tool_manager.list_tools()}
     assert {
         "list_classifications",
+        "list_codelists",
         "recommend_classifications",
         "search_codes",
         "map_codes",

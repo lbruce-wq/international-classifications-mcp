@@ -30,7 +30,8 @@ CREATE TABLE classifications (
 CREATE TABLE codes (
   classification_id TEXT NOT NULL REFERENCES classifications(id), code TEXT NOT NULL,
   label TEXT NOT NULL, level INTEGER, parent_code TEXT, definition TEXT, includes TEXT,
-  excludes TEXT, language TEXT NOT NULL DEFAULT 'en', PRIMARY KEY(classification_id, code, language)
+  excludes TEXT, language TEXT NOT NULL DEFAULT 'en', codelist_id TEXT,
+  PRIMARY KEY(classification_id, code, language)
 );
 CREATE INDEX codes_classification_idx ON codes(classification_id, code);
 CREATE VIRTUAL TABLE codes_fts USING fts5(
@@ -48,6 +49,12 @@ CREATE TABLE correspondences (
   source_url TEXT NOT NULL
 );
 CREATE INDEX correspondence_idx ON correspondences(source_classification_id, target_classification_id, source_code);
+CREATE TABLE codelists (
+  classification_id TEXT NOT NULL REFERENCES classifications(id), codelist_id TEXT NOT NULL,
+  title TEXT NOT NULL, concept TEXT NOT NULL, source_version TEXT NOT NULL,
+  warning TEXT NOT NULL, source_url TEXT NOT NULL,
+  PRIMARY KEY(classification_id, codelist_id)
+);
 CREATE TABLE build_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
 
@@ -75,7 +82,7 @@ def _insert_code(
     if not c or not lab:
         return
     conn.execute(
-        "INSERT OR REPLACE INTO codes(classification_id,code,label,level,parent_code,definition,includes,excludes,language) VALUES(?,?,?,?,?,?,?,?,?)",
+        "INSERT OR REPLACE INTO codes(classification_id,code,label,level,parent_code,definition,includes,excludes,language,codelist_id) VALUES(?,?,?,?,?,?,?,?,?,?)",
         (
             cid,
             c,
@@ -86,6 +93,7 @@ def _insert_code(
             _clean(kwargs.get("includes")),
             _clean(kwargs.get("excludes")),
             kwargs.get("language", "en"),
+            kwargs.get("codelist_id"),
         ),
     )
 
@@ -224,13 +232,32 @@ def _ingest_m49(conn: sqlite3.Connection) -> None:
 def _ingest_mics7(conn: sqlite3.Connection) -> None:
     """Load only round-specific MICS questionnaire response codelists."""
     payload = json.loads((RAW / "mics7_curated.json").read_text(encoding="utf-8"))
+    list_titles = {
+        "SEX": "Sex", "YN": "Yes, no and permitted non-response", "WS_SOURCE": "Main drinking-water source",
+        "WS_SAN": "Sanitation facility type", "BR.STATUS": "Birth-registration status",
+        "IM.SOURCE": "Vaccination evidence/source", "CF.DIFFICULTY": "Child-functioning difficulty scale",
+        "CD.METHOD_GROUP": "Child-discipline method group", "ED.ATTEND": "School-attendance status",
+    }
+    list_aliases = {
+        "Sex": "SEX", "Yes/no": "YN", "Main drinking-water source": "WS_SOURCE",
+        "Sanitation facility": "WS_SAN", "Birth registration": "BR.STATUS",
+        "Vaccination evidence": "IM.SOURCE", "Child functioning response scale": "CF.DIFFICULTY",
+        "Child discipline method group": "CD.METHOD_GROUP", "School attendance status": "ED.ATTEND",
+    }
+    provenance_url = "https://classifications.impactengines.ai/provenance/mics7"
+    warning = "Verify wording, codes, skips and country customisation against the cited MICS7 questionnaire before deployment."
+    for codelist_id, title in list_titles.items():
+        conn.execute("INSERT INTO codelists VALUES(?,?,?,?,?,?,?)", ("mics7_responses", codelist_id, title, title, payload["versions"]["responses"], warning, provenance_url))
     for code, label, codelist, definition in payload["responses"]:
+        codelist_id = list_aliases[codelist]
         _insert_code(
             conn,
             "mics7_responses",
             code,
             label,
             level=2,
+            parent_code=codelist_id,
+            codelist_id=codelist_id,
             definition=definition,
             includes=f"Codelist: {codelist}",
         )
@@ -282,7 +309,7 @@ def build(output: Path = OUTPUT) -> Path:
     _ingest_isco(conn)
     _ingest_m49(conn)
     _ingest_mics7(conn)
-    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.3.1')")
+    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.4.0')")
     conn.execute("INSERT INTO build_metadata VALUES('built_at',?)", (now,))
     conn.execute("INSERT INTO build_metadata VALUES('national_census_geography','out_of_scope')")
     conn.commit()

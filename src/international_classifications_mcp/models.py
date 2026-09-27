@@ -41,6 +41,18 @@ class CodeItem(BaseModel):
     classification_version: str | None = None
     source_title: str | None = None
     source_url: str | None = None
+    codelist_id: str | None = None
+
+
+class CodelistSummary(BaseModel):
+    classification_id: str
+    codelist_id: str
+    title: str
+    concept: str
+    source_version: str
+    option_count: int
+    warning: str
+    source_url: str
 
 
 class SearchResponse(BaseModel):
@@ -62,6 +74,7 @@ class ClassificationRecommendation(BaseModel):
     classification_version: str
     source_title: str
     source_url: str
+    codelist_id: str | None = None
 
 
 class RecommendationResponse(BaseModel):
@@ -102,6 +115,9 @@ class MappingResponse(BaseModel):
 
 class ChoiceListResponse(BaseModel):
     classification_id: str
+    codelist_id: str | None = None
+    codelist_title: str | None = None
+    option_count: int
     level: int | None
     format: str
     rows: list[dict[str, Any]]

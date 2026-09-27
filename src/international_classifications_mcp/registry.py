@@ -13,6 +13,7 @@ from .models import (
     ClassificationRecommendation,
     ClassificationSummary,
     CodeItem,
+    CodelistSummary,
     MappingItem,
     MappingResponse,
     RecommendationResponse,
@@ -79,7 +80,8 @@ def _code_select(score: bool = False) -> str:
 
 
 def _fts_query(text: str) -> str:
-    tokens = re.findall(r"[\w-]+", text, flags=re.UNICODE)
+    tokens = re.findall(r"[^\W_]+", text, flags=re.UNICODE)
+    stopwords = {"a", "an", "the", "of", "for", "to", "no", "such", "code"}
     aliases = {
         "diarrhoea": ["illness", "care"], "diarrhea": ["illness", "care"],
         "fever": ["illness", "care"], "vaccination": ["immunisation", "vaccine"],
@@ -88,26 +90,77 @@ def _fts_query(text: str) -> str:
     expanded: list[str] = []
     for token in tokens[:12]:
         folded = token.casefold()
+        if folded in stopwords:
+            continue
         stem = folded[:-1] if len(folded) > 4 and folded.endswith(("s", "e")) else folded
         expanded.extend([folded, f"{stem}*"])
         expanded.extend(aliases.get(folded, []))
     return " OR ".join(dict.fromkeys(f'"{term}"' if not term.endswith("*") else term for term in expanded))
 
 
+MICS_CODELIST_TERMS = {
+    "BR.STATUS": ("birth registration", "registered birth", "birth certificate"),
+    "CD.METHOD_GROUP": ("child discipline", "disciplinary method", "physical punishment", "psychological aggression"),
+    "CF.DIFFICULTY": ("child functioning", "functioning difficulty", "difficulty scale"),
+    "ED.ATTEND": ("school attendance", "currently attending", "never attended"),
+    "IM.SOURCE": ("vaccination source", "vaccination evidence", "vaccination card", "immunisation source"),
+    "SEX": ("sex", "male female"),
+    "WS_SAN": ("sanitation facility", "toilet facility", "latrine type"),
+    "WS_SOURCE": ("drinking water source", "water source", "main source of drinking water"),
+    "YN": ("yes no", "yes/no", "don't know", "dont know"),
+}
+
+
+def _infer_mics_codelist(text: str) -> str | None:
+    folded = text.casefold().replace("-", " ")
+    for codelist_id, terms in MICS_CODELIST_TERMS.items():
+        if any(term in folded for term in terms):
+            return codelist_id
+    return None
+
+
+def list_codelists(classification_id: str) -> list[CodelistSummary]:
+    _require_classification(classification_id)
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT l.*, COUNT(c.code) AS option_count FROM codelists l LEFT JOIN codes c ON c.classification_id=l.classification_id AND c.codelist_id=l.codelist_id WHERE l.classification_id=? GROUP BY l.classification_id,l.codelist_id ORDER BY l.codelist_id",
+            (classification_id,),
+        ).fetchall()
+    return [CodelistSummary(**dict(row)) for row in rows]
+
+
 def search_codes(
-    query: str, classification_ids: list[str] | None = None, limit: int = 20
+    query: str, classification_ids: list[str] | None = None, limit: int = 20, codelist_id: str | None = None
 ) -> SearchResponse:
     if not query.strip():
         raise ValueError("query must not be empty")
     _validate_limit(limit, 100)
+    if codelist_id and classification_ids is None:
+        classification_ids = ["mics7_responses"]
     where, args = [], []
     if classification_ids:
         for classification_id in classification_ids:
             _require_classification(classification_id)
         where.append("c.classification_id IN ({})".format(",".join("?" * len(classification_ids))))
         args.extend(classification_ids)
+    inferred_codelist = None
+    if codelist_id:
+        if classification_ids != ["mics7_responses"]:
+            raise ValueError("codelist_id currently requires classification_ids=['mics7_responses'].")
+        available = {item.codelist_id for item in list_codelists("mics7_responses")}
+        if codelist_id not in available:
+            raise ValueError(f"Unknown codelist_id '{codelist_id}'. Run list_codelists first.")
+        where.append("c.codelist_id=?")
+        args.append(codelist_id)
+    elif classification_ids == ["mics7_responses"]:
+        inferred_codelist = _infer_mics_codelist(query)
+        if inferred_codelist:
+            where.append("c.codelist_id=?")
+            args.append(inferred_codelist)
     filters = (" AND " + " AND ".join(where)) if where else ""
     fts = _fts_query(query)
+    if not fts:
+        return SearchResponse(query=query, total=0, results=[], warnings=["No searchable letters or numbers were supplied."])
     sql = f"SELECT c.*, m.version AS classification_version, m.name AS source_title, m.source_url, -bm25(codes_fts, 8.0, 4.0, 2.0, 1.0, 1.0) AS score FROM codes_fts JOIN codes c ON c.rowid=codes_fts.rowid JOIN classifications m ON m.id=c.classification_id WHERE codes_fts MATCH ?{filters} ORDER BY score DESC, length(c.code), c.code LIMIT ?"
     with connect() as conn:
         rows = conn.execute(sql, [fts, *args, limit]).fetchall()
@@ -116,6 +169,8 @@ def search_codes(
         warnings.append(
             "No matching codes. Try a broader concept or run recommend_classifications first."
         )
+    elif inferred_codelist:
+        warnings.append(f"Restricted results to inferred MICS codelist {inferred_codelist}. Pass codelist_id explicitly to confirm or override.")
     return SearchResponse(
         query=query,
         total=len(rows),
@@ -142,6 +197,9 @@ def browse_hierarchy(
     _require_classification(classification_id)
     _validate_limit(limit, 500)
     with connect() as conn:
+        if classification_id == "mics7_responses" and parent_code is None:
+            meta = get_classification(classification_id)
+            return [CodeItem(classification_id=classification_id, code=item.codelist_id, label=item.title, level=1, definition=item.concept, classification_version=meta.version, source_title=meta.name, source_url=item.source_url, codelist_id=item.codelist_id) for item in list_codelists(classification_id)[:limit]]
         if parent_code is None:
             rows = conn.execute(
                 _code_select() + " WHERE c.classification_id=? AND c.parent_code IS NULL ORDER BY c.code LIMIT ?",
@@ -168,9 +226,12 @@ def recommend(
 ) -> RecommendationResponse:
     _validate_limit(limit, 20)
     parts = [question_text, survey_context or "", *(answer_options or [])]
-    haystack = " ".join(parts).casefold().replace("_", " ")
+    haystack = " ".join(parts).casefold().replace("_", " ").replace("-", " ").replace("—", " ")
+    indicator_request = "mics" in haystack and any(term in haystack for term in ("indicator", "proportion", "percentage", "prevalence", "rate", "numerator", "denominator"))
     candidates = []
     for cid, rule in CONCEPT_RULES.items():
+        if cid == "mics7_responses" and indicator_request:
+            continue
         matched = [term for term in rule["positive"] if term in haystack]
         conflicts = [term for term in rule["negative"] if term in haystack]
         option_matches = sum(
@@ -183,6 +244,7 @@ def recommend(
         if score <= 0:
             continue
         meta = get_classification(cid)
+        codelist_id = _infer_mics_codelist(haystack) if cid == "mics7_responses" else None
         confidence = "high" if score >= 55 else "medium" if score >= 25 else "low"
         candidates.append(
             ClassificationRecommendation(
@@ -197,12 +259,13 @@ def recommend(
                 classification_version=meta.version,
                 source_title=meta.name,
                 source_url=meta.source_url,
+                codelist_id=codelist_id,
             )
         )
     candidates.sort(key=lambda x: (-x.score, x.classification_id))
     warnings = []
     if not candidates:
-        if "mics" in haystack and any(term in haystack for term in ("indicator", "proportion", "percentage", "prevalence", "rate", "numerator", "denominator")):
+        if indicator_request:
             warnings.append("This is a MICS analytical-indicator request. Use the Development Indicators MCP; this registry intentionally exposes only MICS questionnaire response codelists.")
         else:
             warnings.append("No deterministic concept rule matched. Provide answer options and module context, or search classifications by domain.")
@@ -210,10 +273,15 @@ def recommend(
         warnings.append(
             "The leading concepts are close. Inspect both and use surrounding questionnaire context before deciding."
         )
+    next_action = "Call search_codes or browse_hierarchy only after selecting the intended classification concept."
+    if not candidates and indicator_request:
+        next_action = "Use the Development Indicators MCP to discover and retrieve the MICS indicator definition."
+    elif candidates and candidates[0].classification_id == "mics7_responses" and candidates[0].codelist_id:
+        next_action = f"Search or export MICS codelist {candidates[0].codelist_id}; do not combine it with other response lists."
     return RecommendationResponse(
         recommendations=candidates[:limit],
         warnings=warnings,
-        next_action="Call search_codes or browse_hierarchy only after selecting the intended classification concept.",
+        next_action=next_action,
     )
 
 
@@ -288,12 +356,22 @@ def map_codes(source: str, target: str, codes: list[str]) -> MappingResponse:
 
 
 def export_choices(
-    classification_id: str, level: int | None = None, format: str = "xlsform", limit: int = 1000
+    classification_id: str, level: int | None = None, format: str = "xlsform", limit: int = 1000, codelist_id: str | None = None
 ) -> ChoiceListResponse:
     meta = _require_classification(classification_id)
     _validate_limit(limit, 10000)
+    selected_codelist = None
+    if classification_id == "mics7_responses" and not codelist_id:
+        raise ValueError("codelist_id is required for MICS exports. Run list_codelists('mics7_responses') and select one list.")
+    if codelist_id:
+        available = {item.codelist_id: item for item in list_codelists(classification_id)}
+        if codelist_id not in available:
+            raise ValueError(f"Unknown codelist_id '{codelist_id}'. Run list_codelists first.")
+        selected_codelist = available[codelist_id]
     with connect() as conn:
-        if level is None:
+        if codelist_id:
+            rows = conn.execute("SELECT code,label FROM codes WHERE classification_id=? AND codelist_id=? ORDER BY code LIMIT ?", (classification_id, codelist_id, limit)).fetchall()
+        elif level is None:
             levels = [row[0] for row in conn.execute("SELECT DISTINCT level FROM codes WHERE classification_id=? AND level IS NOT NULL ORDER BY level", (classification_id,))]
             effective_level = levels[0] if len(levels) > 1 else None
             rows = conn.execute(
@@ -307,7 +385,7 @@ def export_choices(
             ).fetchall()
     if format == "xlsform":
         output = [
-            {"list_name": classification_id, "name": row["code"], "label": row["label"]}
+            {"list_name": codelist_id or classification_id, "name": row["code"], "label": row["label"]}
             for row in rows
         ]
     else:
@@ -327,6 +405,9 @@ def export_choices(
     warnings.append(f"Source: {meta.name}, version {meta.version}, {meta.source_url}")
     return ChoiceListResponse(
         classification_id=classification_id,
+        codelist_id=codelist_id,
+        codelist_title=selected_codelist.title if selected_codelist else None,
+        option_count=len(output),
         level=level,
         format=format,
         rows=output,

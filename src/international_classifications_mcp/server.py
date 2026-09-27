@@ -13,6 +13,7 @@ from .models import (
     ChoiceListResponse,
     ClassificationSummary,
     CodeItem,
+    CodelistSummary,
     MappingResponse,
     RecommendationResponse,
     SearchResponse,
@@ -23,6 +24,7 @@ from .registry import export_choices, recommend
 from .registry import get_classification as registry_get_classification
 from .registry import get_code as registry_get_code
 from .registry import list_classifications as registry_list_classifications
+from .registry import list_codelists as registry_list_codelists
 from .registry import map_codes as registry_map_codes
 from .registry import search_codes as registry_search_codes
 from .registry import validate_codes as registry_validate_codes
@@ -52,6 +54,7 @@ mcp = CompatibleFastMCP(
         "Distinguish occupation (ISCO), industry (ISIC), status in employment (ICSE), labour-force status, education level (ISCED), and field of study (ISCED-F). "
         "For questionnaire review, call recommend_classifications with the question, answer options and context; then inspect the selected classification before requesting codes. "
         "MICS7 content is limited to question-specific response codelists. MICS indicator definitions belong in a development-indicators service, not this classification registry. Never route an indicator, proportion, prevalence or rate request to an answer codelist. "
+        "Before exporting MICS responses, call list_codelists and select exactly one codelist_id; never merge independent MICS answer lists. "
         "Do not dump a full detailed classification into a questionnaire unless explicitly requested. Detailed occupation, industry, disease and crime schemes are normally post-coded. "
         "Mappings may be one-to-many or definition-changing: preserve warnings and citations. National census geography is out of scope."
     ),
@@ -76,6 +79,12 @@ def get_classification(classification_id: str) -> ClassificationSummary:
     return registry_get_classification(classification_id)
 
 
+@mcp.tool(title="List codelists", annotations=READ_ONLY)
+def list_codelists(classification_id: str) -> list[CodelistSummary]:
+    """List independent option lists within a classification before searching or exporting one list."""
+    return registry_list_codelists(classification_id)
+
+
 @mcp.tool(title="Recommend classifications", annotations=READ_ONLY)
 def recommend_classifications(
     question_text: str,
@@ -89,10 +98,13 @@ def recommend_classifications(
 
 @mcp.tool(title="Search classification codes", annotations=READ_ONLY)
 def search_codes(
-    query: str, classification_ids: list[str] | None = None, limit: Annotated[int, Field(ge=1, le=100)] = 20
+    query: str,
+    classification_ids: list[str] | None = None,
+    codelist_id: str | None = None,
+    limit: Annotated[int, Field(ge=1, le=100)] = 20,
 ) -> SearchResponse:
-    """Full-text search code labels, definitions, inclusions and exclusions. Prefer specifying classification_ids after concept discovery."""
-    return registry_search_codes(query, classification_ids, limit)
+    """Full-text search code labels, definitions, inclusions and exclusions. Use codelist_id to restrict a MICS response-list search."""
+    return registry_search_codes(query, classification_ids, limit, codelist_id)
 
 
 @mcp.tool(title="Get code definition", annotations=READ_ONLY)
@@ -110,14 +122,16 @@ def browse_hierarchy(
 
 
 @mcp.tool(title="Validate classification codes", annotations=READ_ONLY)
-def validate_codes(classification_id: str, codes: list[str]) -> ValidationResponse:
+def validate_codes(classification_id: str, codes: Annotated[list[str], Field(min_length=1)]) -> ValidationResponse:
     """Validate exact codes against one named classification version."""
     return registry_validate_codes(classification_id, codes)
 
 
 @mcp.tool(title="Map codes between versions", annotations=READ_ONLY)
 def map_codes(
-    source_classification_id: str, target_classification_id: str, codes: list[str]
+    source_classification_id: str,
+    target_classification_id: str,
+    codes: Annotated[list[str], Field(min_length=1)],
 ) -> MappingResponse:
     """Apply official stored correspondences and expose splits, merges, changed meanings and unmapped codes. Never assume one-to-one equivalence."""
     return registry_map_codes(source_classification_id, target_classification_id, codes)
@@ -127,11 +141,12 @@ def map_codes(
 def export_choice_list(
     classification_id: str,
     level: int | None = None,
+    codelist_id: str | None = None,
     format: Literal["xlsform", "simple"] = "xlsform",
     limit: Annotated[int, Field(ge=1, le=10000)] = 1000,
 ) -> ChoiceListResponse:
-    """Return a structured choice list at a selected hierarchy level. Multi-level classifications default to their top level. MICS response identifiers are namespaced and require verification against the current questionnaire before implementation."""
-    return export_choices(classification_id, level, format, limit)
+    """Return a structured choice list at a selected hierarchy level. MICS exports require one codelist_id and never merge unrelated answer lists."""
+    return export_choices(classification_id, level, format, limit, codelist_id)
 
 
 def main() -> None:

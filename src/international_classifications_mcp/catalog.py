@@ -258,7 +258,7 @@ CLASSIFICATIONS = [
         "status": "current",
         "coverage": "curated",
         "description": "Question-specific MICS7 response categories for questionnaire comparison and design; identifiers preserve their codelist namespace.",
-        "source_url": "https://mics.unicef.org/surveys",
+        "source_url": "https://classifications.impactengines.ai/provenance/mics7",
         "licence_note": "Curated operational subset with UNICEF attribution. Codes must not be assumed interchangeable across questions or MICS rounds.",
     },
 ]
@@ -280,6 +280,7 @@ CONCEPT_RULES = {
             "vaccination card",
             "care seeking",
         ],
+        "priority": ["birth registration", "child discipline", "child functioning", "vaccination", "drinking water", "water source", "sanitation facility", "school attendance"],
         "negative": ["official number", "time series", "indicator", "proportion", "percentage", "prevalence", "rate", "denominator", "numerator", "estimate", "analysis"],
         "reason": "The wording concerns a topic with standard MICS questionnaire response categories.",
         "usage_mode": "compare with the round-specific MICS codelist; customise only with documented mappings",
