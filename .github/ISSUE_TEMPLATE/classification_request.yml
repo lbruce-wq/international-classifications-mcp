@@ -1,0 +1,26 @@
+name: Classification request
+description: Propose an authoritative classification or codelist
+title: "[Classification]: "
+body:
+  - type: input
+    id: custodian
+    attributes:
+      label: Official custodian and version
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Authoritative source URL
+    validations:
+      required: true
+  - type: textarea
+    id: use
+    attributes:
+      label: Survey/statistical use case
+    validations:
+      required: true
+  - type: textarea
+    id: licence
+    attributes:
+      label: Licensing or redistribution considerations

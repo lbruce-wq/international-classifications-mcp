@@ -1,0 +1,22 @@
+name: Bug report
+description: Report incorrect behavior, data or provenance
+title: "[Bug]: "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Server version
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result and authoritative source
+    validations:
+      required: true
