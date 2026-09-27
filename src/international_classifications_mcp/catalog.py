@@ -28,6 +28,19 @@ CLASSIFICATIONS = [
         "licence_note": "Official ILO standard; concise categories included with attribution.",
     },
     {
+        "id": "icls_lfs19",
+        "acronym": "ICLS-19 LFS",
+        "name": "Labour Force Status Classification",
+        "version": "19th ICLS (2013)",
+        "custodian": "International Labour Organization",
+        "domain": "labour",
+        "status": "current",
+        "coverage": "core",
+        "description": "Core labour-force-status categories: employed, unemployed and outside the labour force.",
+        "source_url": "https://www.ilo.org/resource/19th-international-conference-labour-statisticians-resolution-concerning",
+        "licence_note": "Core categories from the 19th ICLS resolution; national operational questions require the full ILO measurement framework.",
+    },
+    {
         "id": "icsaw18",
         "acronym": "ICSaW-18",
         "name": "International Classification of Status at Work",
@@ -236,19 +249,6 @@ CLASSIFICATIONS = [
         "licence_note": "Selected common codes included with attribution.",
     },
     {
-        "id": "mics7_modules",
-        "acronym": "MICS7 Modules",
-        "name": "MICS7 Standard Questionnaire Modules and Topics",
-        "version": "7.1.9",
-        "custodian": "UNICEF Multiple Indicator Cluster Surveys",
-        "domain": "household surveys",
-        "status": "current",
-        "coverage": "curated",
-        "description": "Searchable MICS7 questionnaire modules and topic areas, kept separate from response codelists and indicator definitions.",
-        "source_url": "https://mics.unicef.org/tools/MICS7",
-        "licence_note": "Curated discovery metadata derived from official UNICEF MICS7 tools. Consult the current official questionnaire during country customisation.",
-    },
-    {
         "id": "mics7_responses",
         "acronym": "MICS7 Response Codelists",
         "name": "MICS7 Standard Questionnaire Response Categories",
@@ -258,21 +258,8 @@ CLASSIFICATIONS = [
         "status": "current",
         "coverage": "curated",
         "description": "Question-specific MICS7 response categories for questionnaire comparison and design; identifiers preserve their codelist namespace.",
-        "source_url": "https://mics.unicef.org/tools/MICS7",
+        "source_url": "https://mics.unicef.org/surveys",
         "licence_note": "Curated operational subset with UNICEF attribution. Codes must not be assumed interchangeable across questions or MICS rounds.",
-    },
-    {
-        "id": "mics7_indicators",
-        "acronym": "MICS7 Indicators",
-        "name": "MICS7 Indicators and Definitions",
-        "version": "7.1.9",
-        "custodian": "UNICEF Multiple Indicator Cluster Surveys",
-        "domain": "development indicators",
-        "status": "current",
-        "coverage": "curated",
-        "description": "Selected high-use MICS7 indicator concepts, populations and derivation notes, distinct from questionnaire response codes.",
-        "source_url": "https://mics.unicef.org/sites/mics/files/MICS7_Indicators_and_Definitions_7.1.9.docx",
-        "licence_note": "Curated discovery layer pointing to the official UNICEF specification. Always use the cited version for production calculation.",
     },
 ]
 
@@ -293,9 +280,16 @@ CONCEPT_RULES = {
             "vaccination card",
             "care seeking",
         ],
-        "negative": ["official number", "time series"],
+        "negative": ["official number", "time series", "indicator", "proportion", "percentage", "prevalence", "rate", "denominator", "numerator", "estimate", "analysis"],
         "reason": "The wording concerns a topic with standard MICS questionnaire response categories.",
         "usage_mode": "compare with the round-specific MICS codelist; customise only with documented mappings",
+    },
+    "icls_lfs19": {
+        "concept": "labour force status",
+        "positive": ["labour force status", "employed unemployed", "outside the labour force", "not in the labour force", "worked last week", "sought work", "looking for work", "available for work"],
+        "negative": ["employee", "employer", "own-account", "job title"],
+        "reason": "The wording concerns whether a person is employed, unemployed or outside the labour force.",
+        "usage_mode": "derive using the ILO activity, job-search and availability framework",
     },
     "icse18": {
         "concept": "status in employment",
@@ -357,7 +351,8 @@ CONCEPT_RULES = {
     },
     "iscedf2013": {
         "concept": "field of education",
-        "positive": ["field of study", "subject studied", "training field", "degree subject"],
+        "positive": ["field of study", "field of your degree", "field of qualification", "field of education", "subject studied", "training field", "degree subject"],
+        "priority": ["field of study", "field of your degree", "field of qualification", "field of education", "degree subject"],
         "negative": ["highest education", "grade completed"],
         "reason": "The wording concerns the subject or field studied.",
         "usage_mode": "direct broad list or post-interview detailed coding",
@@ -412,6 +407,11 @@ CONCEPT_RULES = {
 }
 
 SEED_CODES = {
+    "icls_lfs19": [
+        ("1", "Employed"),
+        ("2", "Unemployed"),
+        ("3", "Outside the labour force"),
+    ],
     "icse18": [
         ("1", "Independent workers"),
         ("11", "Employers"),

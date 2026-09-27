@@ -222,22 +222,8 @@ def _ingest_m49(conn: sqlite3.Connection) -> None:
 
 
 def _ingest_mics7(conn: sqlite3.Connection) -> None:
-    """Load the curated, round-specific MICS discovery layer.
-
-    MICS modules, response codelists and indicators are deliberately separate
-    classifications: similarly worded codes are not interchangeable objects.
-    """
+    """Load only round-specific MICS questionnaire response codelists."""
     payload = json.loads((RAW / "mics7_curated.json").read_text(encoding="utf-8"))
-    for code, label, questionnaire, definition in payload["modules"]:
-        _insert_code(
-            conn,
-            "mics7_modules",
-            code,
-            label,
-            level=1,
-            definition=definition,
-            includes=f"Questionnaire/population: {questionnaire}",
-        )
     for code, label, codelist, definition in payload["responses"]:
         _insert_code(
             conn,
@@ -247,16 +233,6 @@ def _ingest_mics7(conn: sqlite3.Connection) -> None:
             level=2,
             definition=definition,
             includes=f"Codelist: {codelist}",
-        )
-    for code, label, universe, definition in payload["indicators"]:
-        _insert_code(
-            conn,
-            "mics7_indicators",
-            code,
-            label,
-            level=2,
-            definition=definition,
-            includes=f"Reference population: {universe}",
         )
 
 
@@ -271,9 +247,7 @@ def _source_hash(cid: str) -> str | None:
         "isic4": "isic4to5.xlsx",
         "isco08": "isco08.txt",
         "m49": "m49.csv",
-        "mics7_modules": "mics7_curated.json",
         "mics7_responses": "mics7_curated.json",
-        "mics7_indicators": "mics7_curated.json",
     }
     filename = files.get(cid)
     if not filename or not (RAW / filename).exists():
@@ -308,7 +282,7 @@ def build(output: Path = OUTPUT) -> Path:
     _ingest_isco(conn)
     _ingest_m49(conn)
     _ingest_mics7(conn)
-    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.2.0')")
+    conn.execute("INSERT INTO build_metadata VALUES('registry_version','0.3.0')")
     conn.execute("INSERT INTO build_metadata VALUES('built_at',?)", (now,))
     conn.execute("INSERT INTO build_metadata VALUES('national_census_geography','out_of_scope')")
     conn.commit()

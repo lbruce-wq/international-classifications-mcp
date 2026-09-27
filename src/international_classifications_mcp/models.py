@@ -38,6 +38,9 @@ class CodeItem(BaseModel):
     excludes: str | None = None
     language: str = "en"
     score: float | None = None
+    classification_version: str | None = None
+    source_title: str | None = None
+    source_url: str | None = None
 
 
 class SearchResponse(BaseModel):
@@ -56,6 +59,9 @@ class ClassificationRecommendation(BaseModel):
     matched_evidence: list[str]
     reason: str
     usage_mode: str
+    classification_version: str
+    source_title: str
+    source_url: str
 
 
 class RecommendationResponse(BaseModel):
@@ -90,6 +96,7 @@ class MappingResponse(BaseModel):
     source_classification: str
     target_classification: str
     results: list[MappingItem]
+    sources: list[Citation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 

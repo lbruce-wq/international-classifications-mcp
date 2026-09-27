@@ -29,9 +29,8 @@ def test_catalog_has_tier_one_families():
         "iccs1",
         "m49",
         "sdmx",
-        "mics7_modules",
         "mics7_responses",
-        "mics7_indicators",
+        "icls_lfs19",
     } <= ids
 
 
@@ -81,11 +80,10 @@ def test_official_mapping_isic4_to_5():
 
 def test_mics7_layer_is_versioned_and_separated():
     catalog = {item.id: item for item in list_classifications()}
-    assert catalog["mics7_modules"].version == "7.1.9"
     assert catalog["mics7_responses"].coverage == "curated"
-    assert catalog["mics7_indicators"].version == "7.1.9"
+    assert "mics7_indicators" not in catalog
+    assert "mics7_modules" not in catalog
     assert get_code("mics7_responses", "CF.DIFFICULTY.A_LOT").label == "A lot of difficulty"
-    assert "30 minutes" in get_code("mics7_indicators", "WASH.DRINKING_BASIC").definition
 
 
 def test_mics7_questionnaire_discovery():
@@ -95,5 +93,23 @@ def test_mics7_questionnaire_discovery():
         "MICS household questionnaire",
     )
     assert result.recommendations[0].classification_id == "mics7_responses"
-    search = search_codes("birth registration", ["mics7_modules", "mics7_indicators"], 10)
-    assert search.total >= 2
+    search = search_codes("birth registration", ["mics7_responses"], 10)
+    assert search.total >= 1
+
+
+def test_regression_search_routing_and_validation():
+    assert search_codes("nurse", ["isco08"], 10).total > 0
+    labour = recommend("Was the respondent employed, unemployed, or outside the labour force last week?")
+    assert labour.recommendations[0].classification_id == "icls_lfs19"
+    field = recommend("What was the field of your degree or qualification?")
+    assert field.recommendations[0].classification_id == "iscedf2013"
+    try:
+        search_codes("teacher", ["not_real"], 10)
+        assert False, "unknown classification should fail"
+    except ValueError as error:
+        assert "Unknown classification_id" in str(error)
+    try:
+        search_codes("teacher", ["isco08"], -1)
+        assert False, "negative limit should fail"
+    except ValueError as error:
+        assert "limit must be" in str(error)

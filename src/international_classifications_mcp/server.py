@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from pydantic import Field
 
 from . import __version__
 from .models import (
@@ -50,7 +51,7 @@ mcp = CompatibleFastMCP(
         "Deterministic access to official international statistical classifications. No LLM or paid AI runs inside this server. "
         "Distinguish occupation (ISCO), industry (ISIC), status in employment (ICSE), labour-force status, education level (ISCED), and field of study (ISCED-F). "
         "For questionnaire review, call recommend_classifications with the question, answer options and context; then inspect the selected classification before requesting codes. "
-        "MICS7 content is split into modules, question-specific response codelists and indicator definitions. Never treat a MICS indicator as an answer code, and never mix MICS rounds silently. "
+        "MICS7 content is limited to question-specific response codelists. MICS indicator definitions belong in a development-indicators service, not this classification registry. Never route an indicator, proportion, prevalence or rate request to an answer codelist. "
         "Do not dump a full detailed classification into a questionnaire unless explicitly requested. Detailed occupation, industry, disease and crime schemes are normally post-coded. "
         "Mappings may be one-to-many or definition-changing: preserve warnings and citations. National census geography is out of scope."
     ),
@@ -58,9 +59,10 @@ mcp = CompatibleFastMCP(
     port=int(os.getenv("MCP_PORT", "8000")),
 )
 mcp._mcp_server.version = __version__
+READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
 
-@mcp.tool()
+@mcp.tool(title="List classifications", annotations=READ_ONLY)
 def list_classifications(
     domain: str | None = None, status: str | None = None
 ) -> list[ClassificationSummary]:
@@ -68,52 +70,52 @@ def list_classifications(
     return registry_list_classifications(domain, status)
 
 
-@mcp.tool()
+@mcp.tool(title="Get classification metadata", annotations=READ_ONLY)
 def get_classification(classification_id: str) -> ClassificationSummary:
     """Get authoritative metadata and coverage for one classification_id returned by list_classifications."""
     return registry_get_classification(classification_id)
 
 
-@mcp.tool()
+@mcp.tool(title="Recommend classifications", annotations=READ_ONLY)
 def recommend_classifications(
     question_text: str,
     answer_options: list[str] | None = None,
     survey_context: str | None = None,
-    limit: int = 5,
+    limit: Annotated[int, Field(ge=1, le=20)] = 5,
 ) -> RecommendationResponse:
     """Deterministically rank applicable classification concepts for a questionnaire item. Include answer options and module context. This uses curated rules, not an LLM."""
     return recommend(question_text, answer_options, survey_context, limit)
 
 
-@mcp.tool()
+@mcp.tool(title="Search classification codes", annotations=READ_ONLY)
 def search_codes(
-    query: str, classification_ids: list[str] | None = None, limit: int = 20
+    query: str, classification_ids: list[str] | None = None, limit: Annotated[int, Field(ge=1, le=100)] = 20
 ) -> SearchResponse:
     """Full-text search code labels, definitions, inclusions and exclusions. Prefer specifying classification_ids after concept discovery."""
     return registry_search_codes(query, classification_ids, limit)
 
 
-@mcp.tool()
+@mcp.tool(title="Get code definition", annotations=READ_ONLY)
 def get_code_definition(classification_id: str, code: str) -> CodeItem:
     """Retrieve one exact code, label, hierarchy position and available explanatory notes."""
     return registry_get_code(classification_id, code)
 
 
-@mcp.tool()
+@mcp.tool(title="Browse classification hierarchy", annotations=READ_ONLY)
 def browse_hierarchy(
-    classification_id: str, parent_code: str | None = None, limit: int = 200
+    classification_id: str, parent_code: str | None = None, limit: Annotated[int, Field(ge=1, le=500)] = 200
 ) -> list[CodeItem]:
     """Browse top-level items or immediate children under parent_code without returning the whole classification."""
     return registry_browse_hierarchy(classification_id, parent_code, limit)
 
 
-@mcp.tool()
+@mcp.tool(title="Validate classification codes", annotations=READ_ONLY)
 def validate_codes(classification_id: str, codes: list[str]) -> ValidationResponse:
     """Validate exact codes against one named classification version."""
     return registry_validate_codes(classification_id, codes)
 
 
-@mcp.tool()
+@mcp.tool(title="Map codes between versions", annotations=READ_ONLY)
 def map_codes(
     source_classification_id: str, target_classification_id: str, codes: list[str]
 ) -> MappingResponse:
@@ -121,14 +123,14 @@ def map_codes(
     return registry_map_codes(source_classification_id, target_classification_id, codes)
 
 
-@mcp.tool()
+@mcp.tool(title="Export a choice list", annotations=READ_ONLY)
 def export_choice_list(
     classification_id: str,
     level: int | None = None,
     format: Literal["xlsform", "simple"] = "xlsform",
-    limit: int = 1000,
+    limit: Annotated[int, Field(ge=1, le=10000)] = 1000,
 ) -> ChoiceListResponse:
-    """Return a structured choice list at a selected hierarchy level. MICS response identifiers are namespaced and require verification against the current questionnaire before implementation."""
+    """Return a structured choice list at a selected hierarchy level. Multi-level classifications default to their top level. MICS response identifiers are namespaced and require verification against the current questionnaire before implementation."""
     return export_choices(classification_id, level, format, limit)
 
 

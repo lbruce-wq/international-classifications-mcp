@@ -23,4 +23,4 @@
 
 The registry reports incomplete families as `seed`, `reference`, or `curated`. This is a deliberate safety feature, not a hidden gap.
 
-MICS provenance rule: modules, questionnaire response categories and derived indicators remain different collections. Each carries its MICS round/version; MICS6 and MICS7 content must not be merged without an explicit correspondence review.
+MICS provenance rule: this registry exposes only question-specific response categories. Modules are discovery metadata outside the classification catalogue, and derived indicators belong in the separate development-indicators service. Response categories carry their MICS round/version; MICS6 and MICS7 content must not be merged without an explicit correspondence review.

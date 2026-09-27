@@ -9,6 +9,7 @@ from pathlib import Path
 from .catalog import CONCEPT_RULES
 from .models import (
     ChoiceListResponse,
+    Citation,
     ClassificationRecommendation,
     ClassificationSummary,
     CodeItem,
@@ -60,9 +61,37 @@ def get_classification(classification_id: str) -> ClassificationSummary:
     return ClassificationSummary(**dict(row))
 
 
+def _require_classification(classification_id: str) -> ClassificationSummary:
+    return get_classification(classification_id)
+
+
+def _validate_limit(limit: int, maximum: int) -> None:
+    if not 1 <= limit <= maximum:
+        raise ValueError(f"limit must be between 1 and {maximum}.")
+
+
+def _code_select(score: bool = False) -> str:
+    score_sql = ", -bm25(codes_fts, 8.0, 4.0, 2.0, 1.0, 1.0) AS score" if score else ""
+    return (
+        "SELECT c.*, m.version AS classification_version, m.name AS source_title, "
+        f"m.source_url{score_sql} FROM codes c JOIN classifications m ON m.id=c.classification_id"
+    )
+
+
 def _fts_query(text: str) -> str:
     tokens = re.findall(r"[\w-]+", text, flags=re.UNICODE)
-    return " OR ".join(f'"{token}"' for token in tokens[:12])
+    aliases = {
+        "diarrhoea": ["illness", "care"], "diarrhea": ["illness", "care"],
+        "fever": ["illness", "care"], "vaccination": ["immunisation", "vaccine"],
+        "breastfeeding": ["breastfed", "breastfeed"], "sanitation": ["toilet", "latrine"],
+    }
+    expanded: list[str] = []
+    for token in tokens[:12]:
+        folded = token.casefold()
+        stem = folded[:-1] if len(folded) > 4 and folded.endswith(("s", "e")) else folded
+        expanded.extend([folded, f"{stem}*"])
+        expanded.extend(aliases.get(folded, []))
+    return " OR ".join(dict.fromkeys(f'"{term}"' if not term.endswith("*") else term for term in expanded))
 
 
 def search_codes(
@@ -70,14 +99,16 @@ def search_codes(
 ) -> SearchResponse:
     if not query.strip():
         raise ValueError("query must not be empty")
-    limit = max(1, min(limit, 100))
+    _validate_limit(limit, 100)
     where, args = [], []
     if classification_ids:
+        for classification_id in classification_ids:
+            _require_classification(classification_id)
         where.append("c.classification_id IN ({})".format(",".join("?" * len(classification_ids))))
         args.extend(classification_ids)
     filters = (" AND " + " AND ".join(where)) if where else ""
     fts = _fts_query(query)
-    sql = f"SELECT c.*, -bm25(codes_fts, 8.0, 4.0, 2.0, 1.0, 1.0) AS score FROM codes_fts JOIN codes c ON c.rowid=codes_fts.rowid WHERE codes_fts MATCH ?{filters} ORDER BY score DESC, length(c.code), c.code LIMIT ?"
+    sql = f"SELECT c.*, m.version AS classification_version, m.name AS source_title, m.source_url, -bm25(codes_fts, 8.0, 4.0, 2.0, 1.0, 1.0) AS score FROM codes_fts JOIN codes c ON c.rowid=codes_fts.rowid JOIN classifications m ON m.id=c.classification_id WHERE codes_fts MATCH ?{filters} ORDER BY score DESC, length(c.code), c.code LIMIT ?"
     with connect() as conn:
         rows = conn.execute(sql, [fts, *args, limit]).fetchall()
     warnings = []
@@ -94,9 +125,10 @@ def search_codes(
 
 
 def get_code(classification_id: str, code: str) -> CodeItem:
+    _require_classification(classification_id)
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM codes WHERE classification_id=? AND code=? AND language='en'",
+            _code_select() + " WHERE c.classification_id=? AND c.code=? AND c.language='en'",
             (classification_id, code),
         ).fetchone()
     if not row:
@@ -107,15 +139,22 @@ def get_code(classification_id: str, code: str) -> CodeItem:
 def browse_hierarchy(
     classification_id: str, parent_code: str | None = None, limit: int = 200
 ) -> list[CodeItem]:
+    _require_classification(classification_id)
+    _validate_limit(limit, 500)
     with connect() as conn:
         if parent_code is None:
             rows = conn.execute(
-                "SELECT * FROM codes WHERE classification_id=? AND parent_code IS NULL ORDER BY code LIMIT ?",
+                _code_select() + " WHERE c.classification_id=? AND c.parent_code IS NULL ORDER BY c.code LIMIT ?",
                 (classification_id, limit),
             ).fetchall()
+            if not rows:
+                rows = conn.execute(
+                    _code_select() + " WHERE c.classification_id=? AND c.level=(SELECT MIN(level) FROM codes WHERE classification_id=?) ORDER BY c.code LIMIT ?",
+                    (classification_id, classification_id, limit),
+                ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM codes WHERE classification_id=? AND parent_code=? ORDER BY code LIMIT ?",
+                _code_select() + " WHERE c.classification_id=? AND c.parent_code=? ORDER BY c.code LIMIT ?",
                 (classification_id, parent_code, limit),
             ).fetchall()
     return [CodeItem(**dict(row)) for row in rows]
@@ -127,6 +166,7 @@ def recommend(
     survey_context: str | None = None,
     limit: int = 5,
 ) -> RecommendationResponse:
+    _validate_limit(limit, 20)
     parts = [question_text, survey_context or "", *(answer_options or [])]
     haystack = " ".join(parts).casefold().replace("_", " ")
     candidates = []
@@ -138,7 +178,8 @@ def recommend(
             for option in (answer_options or [])
             if any(term in option.casefold() for term in rule["positive"])
         )
-        score = len(matched) * 20 + option_matches * 15 - len(conflicts) * 12
+        priority_matches = [term for term in rule.get("priority", []) if term in haystack]
+        score = len(matched) * 20 + len(priority_matches) * 60 + option_matches * 15 - len(conflicts) * 12
         if score <= 0:
             continue
         meta = get_classification(cid)
@@ -153,6 +194,9 @@ def recommend(
                 matched_evidence=sorted(set(matched)),
                 reason=rule["reason"],
                 usage_mode=rule["usage_mode"],
+                classification_version=meta.version,
+                source_title=meta.name,
+                source_url=meta.source_url,
             )
         )
     candidates.sort(key=lambda x: (-x.score, x.classification_id))
@@ -173,6 +217,7 @@ def recommend(
 
 
 def validate_codes(classification_id: str, codes: Iterable[str]) -> ValidationResponse:
+    _require_classification(classification_id)
     results = []
     for code in codes:
         try:
@@ -197,6 +242,8 @@ def validate_codes(classification_id: str, codes: Iterable[str]) -> ValidationRe
 
 
 def map_codes(source: str, target: str, codes: list[str]) -> MappingResponse:
+    source_meta = _require_classification(source)
+    target_meta = _require_classification(target)
     results = []
     with connect() as conn:
         for code in codes:
@@ -214,7 +261,7 @@ def map_codes(source: str, target: str, codes: list[str]) -> MappingResponse:
                 if len(rows) > 1
                 else rows[0]["relationship"]
             )
-            note = "; ".join(filter(None, (row["note"] for row in rows))) or None
+            note = "; ".join(dict.fromkeys(filter(None, (row["note"] for row in rows)))) or None
             results.append(
                 MappingItem(
                     source_code=code,
@@ -231,6 +278,10 @@ def map_codes(source: str, target: str, codes: list[str]) -> MappingResponse:
         source_classification=source,
         target_classification=target,
         results=results,
+        sources=[
+            Citation(title=f"{source_meta.name}, version {source_meta.version}", url=source_meta.source_url, custodian=source_meta.custodian),
+            Citation(title=f"{target_meta.name}, version {target_meta.version}", url=target_meta.source_url, custodian=target_meta.custodian),
+        ],
         warnings=warnings,
     )
 
@@ -238,11 +289,15 @@ def map_codes(source: str, target: str, codes: list[str]) -> MappingResponse:
 def export_choices(
     classification_id: str, level: int | None = None, format: str = "xlsform", limit: int = 1000
 ) -> ChoiceListResponse:
+    meta = _require_classification(classification_id)
+    _validate_limit(limit, 10000)
     with connect() as conn:
         if level is None:
+            levels = [row[0] for row in conn.execute("SELECT DISTINCT level FROM codes WHERE classification_id=? AND level IS NOT NULL ORDER BY level", (classification_id,))]
+            effective_level = levels[0] if len(levels) > 1 else None
             rows = conn.execute(
-                "SELECT code,label FROM codes WHERE classification_id=? ORDER BY code LIMIT ?",
-                (classification_id, limit),
+                "SELECT code,label FROM codes WHERE classification_id=? AND (? IS NULL OR level=?) ORDER BY code LIMIT ?",
+                (classification_id, effective_level, effective_level, limit),
             ).fetchall()
         else:
             rows = conn.execute(
@@ -256,6 +311,9 @@ def export_choices(
         ]
     else:
         output = [{"code": row["code"], "label": row["label"]} for row in rows]
+    warnings = []
+    if level is None and 'effective_level' in locals() and effective_level is not None:
+        warnings.append(f"This hierarchy has multiple levels; the export defaulted safely to top level {effective_level}. Specify level explicitly for another level.")
     warning = (
         "Detailed occupational, industry, disease and crime classifications are normally post-coded rather than shown directly to respondents."
         if classification_id in {"isco08", "isic5", "icd11", "iccs1"}
@@ -263,10 +321,13 @@ def export_choices(
         if classification_id == "mics7_responses"
         else None
     )
+    if warning:
+        warnings.append(warning)
+    warnings.append(f"Source: {meta.name}, version {meta.version}, {meta.source_url}")
     return ChoiceListResponse(
         classification_id=classification_id,
         level=level,
         format=format,
         rows=output,
-        warning=warning,
+        warning=" ".join(warnings),
     )
