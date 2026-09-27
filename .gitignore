@@ -7,3 +7,4 @@ node_modules/
 .wrangler/
 data/raw/*
 !data/raw/mics7_curated.json
+!data/raw/survey_codelists_curated.json

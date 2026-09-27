@@ -1,0 +1,48 @@
+{
+  "dhs8_responses": {
+    "version": "8", "source_url": "https://dhsprogram.com/publications/publication-dhsq8-dhs-questionnaires-and-manuals.cfm",
+    "lists": {
+      "DHS8.SEX": ["Sex", [["1","Male"],["2","Female"]]],
+      "DHS8.RESIDENCE": ["Type of place of residence", [["1","Urban"],["2","Rural"]]],
+      "DHS8.MARITAL": ["Current marital or union status", [["1","Married"],["2","Living together"],["3","Widowed"],["4","Divorced"],["5","Separated"],["6","Never in union"]]],
+      "DHS8.VAX_EVIDENCE": ["Vaccination evidence source", [["1","Home-based record seen"],["2","Health-facility record"],["3","Mother or caregiver report"],["8","Don't know"]]],
+      "DHS8.DELIVERY_PLACE": ["Place of delivery", [["1","Respondent's home"],["2","Other home"],["3","Public-sector health facility"],["4","Private-sector health facility"],["5","Other facility or place"]]],
+      "DHS8.CONTRACEPTION": ["Current contraceptive method group", [["1","Female sterilization"],["2","Male sterilization"],["3","IUD"],["4","Injectables"],["5","Implants"],["6","Pill"],["7","Male condom"],["8","Female condom"],["9","Emergency contraception"],["10","Standard Days Method"],["11","Lactational amenorrhea method"],["12","Rhythm"],["13","Withdrawal"],["14","Other method"],["15","No method"]]]
+    }
+  },
+  "wg_responses": {
+    "version": "current", "source_url": "https://www.washingtongroup-disability.com/question-sets/",
+    "lists": {
+      "WG.DIFFICULTY": ["WG Short Set difficulty scale", [["1","No difficulty"],["2","Some difficulty"],["3","A lot of difficulty"],["4","Cannot do at all"]]],
+      "WG.FREQUENCY": ["WG affect frequency scale", [["1","Daily"],["2","Weekly"],["3","Monthly"],["4","A few times a year"],["5","Never"]]],
+      "WG.AFFECT_LEVEL": ["WG affect severity scale", [["1","A little"],["2","A lot"],["3","Somewhere in between a little and a lot"]]]
+    }
+  },
+  "jmp2018_responses": {
+    "version": "2018", "source_url": "https://washdata.org/report/jmp-2018-core-questions-household-surveys",
+    "lists": {
+      "JMP.WATER.SOURCE_CLASS": ["Drinking-water source class", [["1","Improved"],["2","Unimproved"],["3","Surface water"]]],
+      "JMP.SAN.FACILITY_CLASS": ["Sanitation facility class", [["1","Improved"],["2","Unimproved"],["3","Open defecation"]]],
+      "JMP.WATER.LADDER": ["Drinking-water service ladder", [["1","Safely managed"],["2","Basic"],["3","Limited"],["4","Unimproved"],["5","Surface water"]]],
+      "JMP.SAN.LADDER": ["Sanitation service ladder", [["1","Safely managed"],["2","Basic"],["3","Limited"],["4","Unimproved"],["5","Open defecation"]]],
+      "JMP.HYGIENE.LADDER": ["Hygiene service ladder", [["1","Basic"],["2","Limited"],["3","No facility"]]]
+    }
+  },
+  "who_vax_responses": {
+    "version": "current", "source_url": "https://www.who.int/teams/immunization-vaccines-and-biologicals/immunization-analysis-and-insights/global-monitoring/immunization-coverage/survey-methods",
+    "lists": {
+      "WHO.VAX.RECORD": ["Home-based vaccination record availability", [["1","Record seen"],["2","Record reported but not seen"],["3","Never had a record"],["4","Don't know"]]],
+      "WHO.VAX.EVIDENCE": ["Vaccination evidence source", [["1","Home-based record"],["2","Health-facility record"],["3","Caregiver recall"],["4","No evidence"],["8","Don't know"]]],
+      "WHO.VAX.DOSE_STATUS": ["Antigen-dose ascertainment", [["0","Not received"],["1","Received with valid date"],["2","Received with mark/no valid date"],["3","Received by recall only"],["8","Unknown"]]]
+    }
+  },
+  "fao_wca2020_responses": {
+    "version": "2020", "source_url": "https://www.fao.org/world-census-agriculture/wcarounds/wca2020/en/",
+    "lists": {
+      "WCA.LAND_USE": ["Broad land-use class", [["1","Land under temporary crops"],["2","Land under temporary meadows and pastures"],["3","Land temporarily fallow"],["4","Land under permanent crops"],["5","Land under permanent meadows and pastures"],["6","Land under farm buildings and farmyards"],["7","Forest and other wooded land"],["8","Area used for aquaculture"],["9","Other area not elsewhere classified"]]],
+      "WCA.LIVESTOCK": ["Broad livestock group", [["1","Cattle"],["2","Buffaloes"],["3","Sheep"],["4","Goats"],["5","Pigs"],["6","Equines"],["7","Camelids"],["8","Poultry"],["9","Other livestock"]]],
+      "WCA.HOLDING_SECTOR": ["Agricultural holding sector", [["1","Household sector"],["2","Non-household sector"]]],
+      "WCA.MACHINERY_SOURCE": ["Source of agricultural machinery use", [["1","Owned solely by holding"],["2","Owned jointly"],["3","Provided by another holder"],["4","Provided by cooperative"],["5","Provided by private contractor"],["6","Provided by government"]]]
+    }
+  }
+}

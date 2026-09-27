@@ -136,7 +136,11 @@ def search_codes(
         raise ValueError("query must not be empty")
     _validate_limit(limit, 100)
     if codelist_id and classification_ids is None:
-        classification_ids = ["mics7_responses"]
+        with connect() as conn:
+            owners = [row[0] for row in conn.execute("SELECT classification_id FROM codelists WHERE codelist_id=?", (codelist_id,))]
+        if len(owners) != 1:
+            raise ValueError("codelist_id is unknown or ambiguous; specify classification_ids and run list_codelists first.")
+        classification_ids = owners
     where, args = [], []
     if classification_ids:
         for classification_id in classification_ids:
@@ -145,9 +149,9 @@ def search_codes(
         args.extend(classification_ids)
     inferred_codelist = None
     if codelist_id:
-        if classification_ids != ["mics7_responses"]:
-            raise ValueError("codelist_id currently requires classification_ids=['mics7_responses'].")
-        available = {item.codelist_id for item in list_codelists("mics7_responses")}
+        if len(classification_ids) != 1:
+            raise ValueError("codelist_id requires exactly one classification_id.")
+        available = {item.codelist_id for item in list_codelists(classification_ids[0])}
         if codelist_id not in available:
             raise ValueError(f"Unknown codelist_id '{codelist_id}'. Run list_codelists first.")
         where.append("c.codelist_id=?")
@@ -197,9 +201,10 @@ def browse_hierarchy(
     _require_classification(classification_id)
     _validate_limit(limit, 500)
     with connect() as conn:
-        if classification_id == "mics7_responses" and parent_code is None:
+        codelists = list_codelists(classification_id)
+        if codelists and parent_code is None:
             meta = get_classification(classification_id)
-            return [CodeItem(classification_id=classification_id, code=item.codelist_id, label=item.title, level=1, definition=item.concept, classification_version=meta.version, source_title=meta.name, source_url=item.source_url, codelist_id=item.codelist_id) for item in list_codelists(classification_id)[:limit]]
+            return [CodeItem(classification_id=classification_id, code=item.codelist_id, label=item.title, level=1, definition=item.concept, classification_version=meta.version, source_title=meta.name, source_url=item.source_url, codelist_id=item.codelist_id) for item in codelists[:limit]]
         if parent_code is None:
             rows = conn.execute(
                 _code_select() + " WHERE c.classification_id=? AND c.parent_code IS NULL ORDER BY c.code LIMIT ?",

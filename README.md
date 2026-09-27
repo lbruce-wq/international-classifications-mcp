@@ -4,11 +4,13 @@ A free, open-source, deterministic MCP server for discovering, explaining, valid
 
 It is designed for questionnaire development, survey coding, statistical harmonisation and reproducible analysis. No LLM, embedding service or paid AI runs inside the server. The connected AI client interprets the user's task; this service provides versioned official structures, deterministic retrieval and provenance.
 
-## Coverage (v0.4)
+## Coverage (v0.5)
 
 The v0.1 registry includes full machine-readable structures for ISIC Rev.5, CPC 3.0, COICOP 2018, HS 2022, SITC Rev.4, BEC Rev.5 and UN M49; a complete ISCO-08 code/title hierarchy; the official ISIC Rev.4 → Rev.5 correspondence; concise operational structures for ICSE-18, ISCED 2011, ISCED-F 2013, ICCS and selected SDMX cross-domain codes; and authoritative catalogue/reference coverage for ICSaW-18, FAO ICC 1.1, ICD-11 and ICF.
 
 MICS7 is represented only by curated, question-specific response codelists for matching questionnaire answer categories. MICS modules and analytical indicator definitions are intentionally not exposed as classifications; indicator discovery belongs in a development-indicators service. The response layer does not replace UNICEF's current questionnaires or country customisation guidance and never silently combines MICS rounds.
+
+Version 0.5 adds ICC 1.1, ICATUS 2016, COFOG, COPNI, COPP, UNECE Recommendation 20 units and Recommendation 21 package types; detailed ISCED-F and ICCS titles; expanded ICSE/ICSaW and SDMX cores; and separately versioned DHS-8, Washington Group, JMP WASH, WHO vaccination and FAO WCA questionnaire codelists.
 
 Each MICS answer list has a stable `codelist_id`. Call `list_codelists`, then pass one identifier to search or export. The server refuses to merge unrelated MICS choices into one questionnaire list.
 

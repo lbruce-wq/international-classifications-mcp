@@ -33,6 +33,8 @@ def test_catalog_has_tier_one_families():
         "sdmx",
         "mics7_responses",
         "icls_lfs19",
+        "icatus2016", "cofog1999", "copni1999", "copp1999", "unece_rec20", "unece_rec21",
+        "dhs8_responses", "wg_responses", "jmp2018_responses", "who_vax_responses", "fao_wca2020_responses",
     } <= ids
 
 
@@ -45,6 +47,15 @@ def test_current_full_sources_have_codes():
     assert counts["sitc4"] > 5000
     assert counts["isco08"] > 500
     assert counts["m49"] > 200
+    assert counts["icc11"] >= 190
+    assert counts["icatus2016"] > 700
+    assert counts["cofog1999"] > 180
+    assert counts["copni1999"] > 60
+    assert counts["copp1999"] > 50
+    assert counts["unece_rec20"] > 2000
+    assert counts["unece_rec21"] > 400
+    assert counts["iscedf2013"] > 100
+    assert counts["iccs1"] > 300
 
 
 def test_exact_and_full_text_lookup():
@@ -123,6 +134,21 @@ def test_search_safely_handles_fts_punctuation():
         result = search_codes(query, None, 5)
         assert result.total >= 0
     assert search_codes("zzzzzz-no-such-code", None, 5).total == 0
+
+
+def test_priority_three_questionnaire_ecosystems_are_separate_codelists():
+    expected = {
+        "dhs8_responses": "DHS8.CONTRACEPTION",
+        "wg_responses": "WG.DIFFICULTY",
+        "jmp2018_responses": "JMP.WATER.LADDER",
+        "who_vax_responses": "WHO.VAX.EVIDENCE",
+        "fao_wca2020_responses": "WCA.LAND_USE",
+    }
+    for classification_id, codelist_id in expected.items():
+        ids = {item.codelist_id for item in list_codelists(classification_id)}
+        assert codelist_id in ids
+        exported = export_choices(classification_id, codelist_id=codelist_id)
+        assert exported.option_count > 1
 
 
 def test_regression_search_routing_and_validation():

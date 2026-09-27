@@ -1,4 +1,4 @@
-# Tier-1 source audit
+# Classification source audit (v0.5)
 
 | Family | Custodian | Access used | Bundled coverage | Notes |
 |---|---|---|---|---|
@@ -9,18 +9,25 @@
 | SITC Rev.4 | UNSD / UN Comtrade | JSON | Full hierarchy | Analytical trade classification |
 | BEC Rev.5 | UNSD / UN Comtrade | JSON | Full hierarchy | Broad economic categories |
 | ISIC 4→5 | UNSD | Official XLSX | Official correspondence | Splits/changes are not flattened |
-| ISCO-08 | ILO | Official web/manual + verified open code/title mirror | Full code/title hierarchy | Definitions remain linked to ILO; source mirror is disclosed |
-| ICSE-18 / ICSaW-18 | ILO | Official standard | Core operational categories / reference | Questionnaire concept rules included |
-| ISCED / ISCED-F | UNESCO UIS | Official manuals | Core level/broad-field structures | National mappings are out of scope |
-| ICC 1.1 | FAO Caliper | Linked-data portal | Reference metadata | Add full adapter after confirming stable machine endpoint and terms |
+| ISCO-08 | ILO | Official web/manual + verified open code/title mirror | Full code/title hierarchy | Definitions and index terms remain linked to ILO; source mirror is disclosed |
+| ICSE-18 / ICSaW-18 | ILO | Official 20th ICLS resolution/manual | Operational category structures | Questionnaire concept rules included |
+| ISCED 2011 | UNESCO UIS | Official manual | Core education levels | Detailed programme/attainment expansion remains pending; national mappings are out of scope |
+| ISCED-F 2013 | UNESCO UIS | Official structure, accessed as attributed SKOS | Detailed field hierarchy | National field mappings are out of scope |
+| ICC 1.1 | FAO | Official WCA 2020 Annex 4 | Full 196-item crop hierarchy | FAO Caliper remains the preferred linked-data reference when available |
 | ICD-11 / ICF | WHO | WHO classification portal/API | Reference metadata | WHO licensing/API terms apply; no unlicensed mirror |
-| ICCS 1.0 | UNODC | Official manual | Top-level structure | Detailed definitions remain linked |
+| ICCS 1.0 | UNODC | Official manual | Detailed 319-item structure | Narrative definitions remain linked |
 | M49 | UNSD | Official HTML table | Full country/area codes | No national census or administrative codes |
-| SDMX CDCL | SDMX Secretariat | Official registry/downloads | Selected operational codes | Expand via Global Registry adapter |
-| MICS7 modules | UNICEF MICS | Official MICS7 tools page / questionnaire topics | Curated discovery layer, v7.1.9 | Modules are not classifications or answer codes |
+| SDMX CDCL | SDMX Secretariat | Official registry/downloads | Expanded operational seed | A full Global Registry sync remains future work |
 | MICS7 responses | UNICEF MICS | Official MICS7 questionnaires and customisation guidance | Curated question-specific codelists, v7.1 | Namespaced; verify wording, skips and country adaptations before deployment |
-| MICS7 indicators | UNICEF MICS | Official Indicators and Definitions v7.1.9 | Selected high-use concepts and derivation notes | Official specification remains authoritative |
+| COFOG / COPNI / COPP | UNSD | Official UNSD structures | Full title hierarchies | Purpose classifications for government, nonprofit institutions and producers |
+| ICATUS 2016 | UNSD | Official UNSD structure | Full 724-item title hierarchy | International time-use activities |
+| UNECE Recommendations 20/21 | UNECE, accessed via maintained Data Package mirrors | Attributed CSV distributions | Full code/title lists | Units of measure and package types; UNECE remains authoritative |
+| DHS-8 responses | DHS Program | Official model questionnaires/manuals | Curated high-use answer lists | Not indicators; country questionnaires and recode manuals remain authoritative |
+| Washington Group responses | Washington Group | Official question sets | Curated response scales | Question-set identity and version must be preserved |
+| JMP WASH mappings | WHO/UNICEF JMP | Official core questions and ladders | Curated mappings and service ladders | Estimates and indicators belong in the indicators service |
+| WHO vaccination responses | WHO | Official vaccination monitoring guidance | Curated evidence/record/status lists | Programme schedules remain country-specific |
+| FAO WCA survey responses | FAO | World Programme for the Census of Agriculture 2020 | Curated land, livestock, holding and machinery lists | Distinct from the full ICC crop hierarchy |
 
 The registry reports incomplete families as `seed`, `reference`, or `curated`. This is a deliberate safety feature, not a hidden gap.
 
-MICS provenance rule: this registry exposes only question-specific response categories. Modules are discovery metadata outside the classification catalogue, and derived indicators belong in the separate development-indicators service. Response categories carry their MICS round/version; MICS6 and MICS7 content must not be merged without an explicit correspondence review.
+Survey-ecosystem provenance rule: MICS, DHS, Washington Group, JMP, WHO vaccination and FAO WCA entries expose versioned questionnaire response codelists or categorical mappings only. They do not duplicate indicator definitions or estimates. Country adaptations, exact question wording, skips and collection protocols must be verified against the cited official instrument before deployment.
